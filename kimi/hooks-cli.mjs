@@ -38,7 +38,7 @@ function managed(text) {
   const stop = end + END.length + (text[end + END.length] === '\n' ? 1 : 0);
   return { start: start - Number(match[1]), stop, payload: match[3] };
 }
-export function configure(action, { file = configFile(), home = process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office'), node = findNode(), platform = process.platform } = {}) {
+export function configure(action, { file = configFile(), home = process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office'), node, platform = process.platform } = {}) {
   if (!['install','uninstall','status'].includes(action)) throw new Error('Use install, status, or uninstall.');
   const exists = fs.existsSync(file), original = exists ? fs.readFileSync(file, 'utf8') : '';
   validate(original); const block = managed(original);
@@ -52,7 +52,7 @@ export function configure(action, { file = configFile(), home = process.env.PIXE
       const tmp = path.join(helper, name + '.tmp-' + process.pid);
       fs.copyFileSync(new URL(name, import.meta.url), tmp); fs.renameSync(tmp, path.join(helper, name));
     }
-    const command = hookCommand(node, path.join(helper,'hook-bridge.mjs'), platform);
+    const command = hookCommand(node || findNode(), path.join(helper,'hook-bridge.mjs'), platform);
     const payload = EVENTS.map(event => `[[hooks]]\nevent = ${JSON.stringify(event)}\ncommand = ${JSON.stringify(command)}\ntimeout = 1\n`).join('\n');
     if (block && block.payload === payload) return { changed: false, installed: true, file };
     if (block) throw new Error('Existing integration uses another path. Uninstall it before reinstalling.');
