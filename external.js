@@ -1,3 +1,5 @@
+import { ObservedSessions } from './observed-sessions.js';
+import { normalizeHook } from './kimi/normalize.mjs';
 // Отворен вход: всеки инструмент може да влезе в офиса през POST /api/event (само локално).
 // Два формата:
 //  1. собствен (за скриптове и curl): { agent, label?, provider?, type, tool?, detail?, id?, reason? }
@@ -39,18 +41,19 @@ export class External {
   /** emit(evt) – като emitEvt в server.js; changed() – списъкът (състоянията) се смени. */
   constructor({ emit, changed }) {
     this.emit = emit; this.changed = changed;
+    this.observed = new ObservedSessions({ emit, changed });
     this.agents = new Map(); // id -> { agent, label, provider, status, waitingFor, last, open: [], act, n }
     this.timer = setInterval(() => this.expire(), 30e3); this.timer.unref?.();
   }
 
   /** За списъка с живи сесии (WS {type:'sessions'}). */
   list() {
-    return [...this.agents.values()].map((x) => {
+    return [...this.observed.list(), ...[...this.agents.values()].map((x) => {
       const it = { agent: x.agent, label: x.label, status: x.status };
       if (x.provider !== 'ext' && x.provider !== 'hook') it.provider = x.provider; // етикетът „· Copilot“ и за страница, отворена по-късно
       if (x.status === 'waiting') it.waitingFor = x.waitingFor;
       return it;
-    });
+    })];
   }
 
   expire(now = Date.now()) {
@@ -68,19 +71,21 @@ export class External {
     // camelCase payload-ите на Copilot CLI нямат името на събитието – тогава то идва от адреса (?event=preToolUse)
     if (event && !body.hook_event_name && !body.type) body = { ...body, hook_event_name: str(event, 40) };
     const hook = !!(body.hook_event_name || body.sessionId || body.conversation_id || body.session_id);
-    const e = hook ? this.fromHook(body, nameOf(from) || 'hook') : this.fromNative(body, nameOf(from));
+    const kimiHook = hook && nameOf(from) === 'kimi' ? normalizeHook(body) : null;
+    const e = kimiHook ? this.fromNative(kimiHook, 'kimi') : hook ? this.fromHook(body, nameOf(from) || 'hook') : this.fromNative(body, nameOf(from));
     if (!e) return { ok: !hook ? false : true, hook, error: hook ? undefined : 'type' };
     if (!e.agent) return { ok: false, hook, error: 'agent' };
-    this.apply(e);
+    if (e.provider === 'kimi') this.observed.ingest(e);
+    else this.apply(e);
     return { ok: true, hook };
   }
 
   fromNative(b, from) {
     const type = str(b.type, 20).toLowerCase();
-    if (!['start', 'prompt', 'thinking', 'tool_start', 'tool_end', 'activity', 'waiting', 'idle', 'end'].includes(type)) return null;
+    if (!['start', 'prompt', 'thinking', 'tool_start', 'tool_end', 'activity', 'waiting', 'idle', 'end', 'turn_start', 'turn_complete', 'turn_failed', 'turn_interrupted', 'tool_failure', 'permission_resolved', 'heartbeat'].includes(type)) return null;
     const raw = idOf(b.agent || b.session);
     const provider = nameOf(b.provider) || from || 'ext';
-    return { agent: raw && `${provider}:${raw}`, label: str(b.label, 60), provider, type, tool: b.tool != null ? toolName(b.tool) : '', detail: str(b.detail, 60), id: idOf(b.id), reason: str(b.reason, 20) };
+    return { agent: raw && `${provider}:${raw}`, label: str(b.label, 60), provider, type, tool: b.tool != null ? toolName(b.tool) : '', detail: str(b.detail, 60), id: idOf(b.id), reason: str(b.reason, 20), turn_id: idOf(b.turn_id), testing: b.testing === true, confidence: b.confidence === 'inferred' ? 'inferred' : 'observed' };
   }
 
   /** Payload на hook: Copilot CLI (camelCase и съвместимия с VS Code), Cursor, Claude Code. */
