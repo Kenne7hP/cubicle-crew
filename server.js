@@ -11,6 +11,7 @@ import { WebSocketServer } from 'ws';
 import { Wallet } from './wallet.js';
 import { Weather } from './weather.js';
 import { Updates } from './update.js';
+import { publishBridge } from './bridge-runtime.js';
 import { ObservedSessions } from './observed-sessions.js';
 import { External } from './external.js';
 import { focusPid } from './focus.js';
@@ -57,10 +58,15 @@ const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.png': 'image/png', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp',
 };
+let bridgeRuntime = null;
 const server = http.createServer((req, res) => {
   if (!localReq(req)) { res.writeHead(403).end(); return; }
   let urlPath;
   try { urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { res.writeHead(400).end(); return; } // лош %-код не срива сървъра
+  if (urlPath === '/api/bridge' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(bridgeRuntime || {})); return;
+  }
   // списък на override спрайтовете – клиентът не прави заявки към липсващи файлове
   if (urlPath === '/api/sprites') {
     let files = [];
@@ -779,6 +785,7 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
     } catch { /* портът е зает от друго приложение */ }
     actual = await fallback();
   }
+  try { bridgeRuntime = publishBridge(actual, HOME).runtime; } catch { console.log('Kimi bridge discovery unavailable; check local directory permissions.'); }
   if (actual !== port) console.log(`Port ${port} is taken by another app – using ${actual} instead.`);
   setInterval(poll, POLL_MS);
   poll();
