@@ -1,3 +1,5 @@
+> **Codex + Kimi Code MVP fork:** [中文安装与验证说明](README_MVP_zh.md) · [Test report](docs/test-report.md). Upstream documentation below.
+
 <div align="center">
 
 <img src="docs/media/logo.png" alt="Cubicle Crew" width="520">
