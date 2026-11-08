@@ -38,7 +38,8 @@
     "kimi:hooks:install": "node kimi/hooks-cli.mjs install",
     "kimi:hooks:status": "node kimi/hooks-cli.mjs status",
     "kimi:hooks:uninstall": "node kimi/hooks-cli.mjs uninstall",
-    "dist:win": "electron-builder --win nsis --publish never"
+    "dist:win": "electron-builder --win nsis --publish never",
+    "dist:win:portable": "electron-builder --win dir --publish never --config.win.signAndEditExecutable=false"
   },
   "engines": {
     "node": ">=22"

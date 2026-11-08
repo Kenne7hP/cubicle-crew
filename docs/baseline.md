@@ -10,3 +10,5 @@ Local branch: feat/codex-kimi-live. Node v24.22.1; npm 11.9.0; Linux container.
 - No user CLI configuration has been changed.
 
 The work starts from the exact reviewed upstream commit. The plan documents are retained here for reproducibility. Source correctness takes precedence where the proposed design differs from actual interfaces.
+
+Subsequent environment probe: Electron binary downloaded successfully. Graphical launch could not complete: root requires --no-sandbox and the managed environment then refused Unix singleton sockets. No visual validation is claimed.

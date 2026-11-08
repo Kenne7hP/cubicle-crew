@@ -37,12 +37,14 @@ export class ObservedSessions {
         if (x.open.size >= MAX_IDS) { close(); x.known = false; }
         x.turnOpen = true; x.known = true;
         const tool = { id: e.id, tool: e.tool || 'Tool', testing: !!e.testing, confidence: e.testing ? 'inferred' : 'observed' };
+        if (tool.tool === 'AskUserQuestion') { x.waiting = true; x.waitingTool = e.id; }
         x.open.set(e.id, tool); send({ type: 'tool_start', ...tool, detail: '' }); break;
       }
       case 'tool_end': case 'tool_failure': {
         const id = e.tool_use_id || e.id;
         if (!id || x.finished.has(id)) return;
         x.finished.add(id); cap(x.finished); x.open.delete(id);
+        if (x.waitingTool === id) { x.waiting = false; x.waitingTool = null; }
         send({ type: 'tool_end', tool_use_id: id });
         if (e.type === 'tool_failure') send({ type: 'outcome', outcome: 'error', scope: 'tool', confidence: 'observed' });
         break;
@@ -50,7 +52,7 @@ export class ObservedSessions {
       case 'waiting':
         x.waiting = true; x.known = true; send({ type: 'waiting', reason: e.reason || 'permission' }); break;
       case 'permission_resolved':
-        x.waiting = false; send({ type: 'permission_resolved' }); break;
+        x.waiting = false; x.waitingTool = null; send({ type: 'permission_resolved' }); break;
       case 'turn_complete': case 'turn_failed': case 'turn_interrupted': case 'idle': {
         const hadWork = x.turnOpen || x.open.size > 0 || x.waiting;
         close(); x.turnOpen = false; x.waiting = false; x.known = true;
@@ -75,7 +77,7 @@ export class ObservedSessions {
       const uncertain = age > staleAt || !x.known || x.restored;
       out.push({ agent: x.agent, label: x.label, provider: x.provider,
         status: uncertain ? 'unknown' : x.waiting ? 'waiting' : x.turnOpen || x.open.size ? 'busy' : 'idle',
-        waitingFor: x.waiting && !uncertain ? 'permission prompt' : undefined,
+        waitingFor: x.waiting && !uncertain ? (x.waitingTool ? 'question' : 'permission prompt') : undefined,
         confidence: uncertain ? 'unknown' : 'observed', restored: x.restored,
         tools: uncertain ? [] : [...x.open.values()] });
     }

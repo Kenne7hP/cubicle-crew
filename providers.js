@@ -85,6 +85,7 @@ function codexTool(name, args) {
       const f = String(t).match(/\*\*\* (?:Update|Add|Delete) File: (.+)/);
       return [/\*\*\* Add File/.test(t) ? 'Write' : 'Edit', clip(f ? f[1] : '')];
     }
+    case 'request_user_input': return ['AskUserQuestion', ''];
     case 'update_plan': return ['TodoWrite', ''];
     case 'view_image': return ['Read', clip(a?.path)];
     case 'web_search': case 'web_search_call': return ['WebSearch', clip(a?.query || a?.action?.query)];

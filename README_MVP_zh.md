@@ -8,7 +8,7 @@
 
 ### 安装包
 
-- Windows：运行 `CubicleCrew-Setup-2.22.0-kimi.1.exe`。本次为未签名的交叉构建测试包，尚未在真实 Windows 上验收。
+- Windows：解压 `CubicleCrew-2.22.0-kimi.1-windows-portable.zip`，双击其中的 `Cubicle Crew.exe`。本次为未签名的交叉构建测试包，尚未在真实 Windows 上验收。NSIS 安装包构建因缺少 Wine 未完成，不提供残缺安装器。
 - Omarchy：`chmod +x CubicleCrew-2.22.0-kimi.1-linux.AppImage` 后运行。若缺 FUSE，可尝试 `./CubicleCrew-2.22.0-kimi.1-linux.AppImage --appimage-extract-and-run`。本次已构建，尚未在真实 Omarchy 桌面验收。
 - 打开托盘菜单 → **Kimi Code integration → Enable observation hooks**，然后重启 Kimi Code CLI 会话。
 - Codex 无需安装 Hook；默认监视 `~/.codex/sessions`，可通过 `CODEX_HOME` 自定义。

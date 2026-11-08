@@ -27,3 +27,11 @@ test('cross-platform project basename and local testing classification', () => {
   assert.ok(isTestCommand('npm run test:unit')); assert.ok(isTestCommand('pytest -q'));
   assert.ok(!isTestCommand('echo npm test'));
 });
+
+test('Codex explicit question tool is observable waiting, not inferred approval',()=>{
+ const s=new ObservedSessions();const emit=e=>s.ingest(e);const file='/tmp/question-fixture.jsonl';
+ codexLine(file,JSON.stringify({type:'response_item',payload:{type:'function_call',name:'request_user_input',call_id:'question1',arguments:'{}'}}),emit,()=>{});
+ assert.equal(s.list()[0].status,'waiting');assert.equal(s.list()[0].waitingFor,'question');
+ codexLine(file,JSON.stringify({type:'response_item',payload:{type:'function_call_output',call_id:'question1',output:'private'}}),emit,()=>{});
+ assert.equal(s.list()[0].status,'busy');
+});
