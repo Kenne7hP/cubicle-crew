@@ -7,6 +7,7 @@ import { parse } from 'smol-toml';
 import { EVENTS } from './normalize.mjs';
 const BEGIN = '# BEGIN pixel-office-kimi managed hooks';
 const END = '# END pixel-office-kimi managed hooks';
+const validate = text => { try { return parse(text); } catch { throw new Error('Invalid or conflicting TOML; configuration was not changed.'); } };
 const digest = text => createHash('sha256').update(text).digest('hex');
 export const configFile = () => path.join(process.env.KIMI_CODE_HOME || path.join(os.homedir(), '.kimi-code'), 'config.toml');
 export function hookCommand(node, bridge, platform = process.platform) {
@@ -40,7 +41,7 @@ function managed(text) {
 export function configure(action, { file = configFile(), home = process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office'), node = findNode(), platform = process.platform } = {}) {
   if (!['install','uninstall','status'].includes(action)) throw new Error('Use install, status, or uninstall.');
   const exists = fs.existsSync(file), original = exists ? fs.readFileSync(file, 'utf8') : '';
-  parse(original); const block = managed(original);
+  validate(original); const block = managed(original);
   if (action === 'status') return { installed: !!block, file };
   if (action === 'uninstall' && !block) return { changed: false, installed: false, file };
   let output;
@@ -58,7 +59,7 @@ export function configure(action, { file = configFile(), home = process.env.PIXE
     const prefix = original.length > 0 && !original.endsWith('\n') ? '\n' : '';
     output = original + prefix + BEGIN + `\n# prefix-newline: ${prefix.length}\n# sha256: ${digest(payload)}\n` + payload + END + '\n';
   } else output = original.slice(0,block.start) + original.slice(block.stop);
-  parse(output); // catches inline hooks arrays, duplicate keys, and malformed existing TOML
+  validate(output); // catches inline hooks arrays, duplicate keys, and malformed existing TOML
   fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   if ((fs.existsSync(file) ? fs.readFileSync(file,'utf8') : '') !== original) throw new Error('Configuration changed concurrently; retry.');
   const backup = file + '.pixel-office-' + randomUUID() + '.bak';

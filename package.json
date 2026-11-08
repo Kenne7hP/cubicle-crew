@@ -1,6 +1,6 @@
 {
   "name": "cubicle-crew",
-  "version": "2.22.0",
+  "version": "2.22.0-kimi.1",
   "type": "module",
   "bin": {
     "cubicle-crew": "bin/cubicle-crew.js"
@@ -19,7 +19,11 @@
     "lan.js",
     "folders.js",
     "public/",
-    "!public/sprites/*.psd"
+    "!public/sprites/*.psd",
+    "bridge-runtime.js",
+    "observed-sessions.js",
+    "kimi/**",
+    "LICENSE"
   ],
   "scripts": {
     "start": "node server.js",
@@ -33,7 +37,8 @@
     "dist:linux": "electron-builder --linux --publish never",
     "kimi:hooks:install": "node kimi/hooks-cli.mjs install",
     "kimi:hooks:status": "node kimi/hooks-cli.mjs status",
-    "kimi:hooks:uninstall": "node kimi/hooks-cli.mjs uninstall"
+    "kimi:hooks:uninstall": "node kimi/hooks-cli.mjs uninstall",
+    "dist:win": "electron-builder --win nsis --publish never"
   },
   "engines": {
     "node": ">=22"
@@ -47,7 +52,7 @@
     "electron-builder": "^26.15.3"
   },
   "main": "electron/main.js",
-  "description": "Your Claude Code agents, living in a tiny pixel-art office",
+  "description": "Local pixel office observing Codex and Kimi Code CLI events",
   "keywords": [
     "claude",
     "claude-code",
@@ -65,7 +70,7 @@
   "build": {
     "appId": "com.pixeloffice.desktop",
     "productName": "Cubicle Crew",
-    "copyright": "Copyright © 2026 Kalin Dimitrov",
+    "copyright": "Copyright \u00a9 2026 Kalin Dimitrov",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -85,7 +90,11 @@
       "folders.js",
       "electron/**",
       "public/**",
-      "!public/sprites/*.psd"
+      "!public/sprites/*.psd",
+      "bridge-runtime.js",
+      "observed-sessions.js",
+      "kimi/**",
+      "LICENSE"
     ],
     "asar": true,
     "win": {
@@ -132,7 +141,7 @@
       "gatekeeperAssess": false,
       "extendInfo": {
         "LSUIElement": true,
-        "NSHumanReadableCopyright": "Copyright © 2026 Kalin Dimitrov"
+        "NSHumanReadableCopyright": "Copyright \u00a9 2026 Kalin Dimitrov"
       },
       "artifactName": "CubicleCrew-${version}-mac.${ext}"
     },

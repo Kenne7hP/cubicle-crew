@@ -48,6 +48,7 @@ const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public')
 const SPRITES = path.join(PUBLIC, 'sprites');
 const HOST = '127.0.0.1';                 // само локално – никой от мрежата (Wi-Fi в офиса/кафенето) не вижда сесиите
 const STARTED = Date.now();
+const OFFLINE = process.env.PIXEL_OFFICE_OFFLINE !== '0';
 // DNS rebinding: заявка, чийто Host не е локален, идва от чужд домейн, насочен към 127.0.0.1
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
 const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
@@ -63,6 +64,9 @@ const server = http.createServer((req, res) => {
   if (!localReq(req)) { res.writeHead(403).end(); return; }
   let urlPath;
   try { urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { res.writeHead(400).end(); return; } // лош %-код не срива сървъра
+  if (OFFLINE && (urlPath === '/api/weather/search' || (req.method !== 'GET' && ['/api/weather', '/api/update', '/api/lan'].includes(urlPath)))) {
+    res.writeHead(403, { 'Content-Type': MIME['.json'] }).end(JSON.stringify({ ok: false, error: 'offline-mode' })); return;
+  }
   if (urlPath === '/api/bridge' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
     res.end(JSON.stringify(bridgeRuntime || {})); return;
@@ -276,7 +280,9 @@ const perms = new Permissions({
   log: (m) => console.log(m),
 });
 const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });
+if (OFFLINE) weather.s.enabled = false;
 const updates = new Updates(broadcast, (m) => { if (DEBUG) console.log(m); });
+if (OFFLINE) updates.s.enabled = false;
 // отвореният вход за други агенти (POST /api/event): събитията – като от транскриптите, състоянията – в живите сесии
 const codexSessions = new ObservedSessions({ emit: (e) => emitEvt(e), changed: () => scanSessions() });
 const external = new External({ emit: (e) => emitEvt(e), changed: () => scanSessions() });
@@ -610,7 +616,14 @@ const MAX_LINE_BYTES = 2 * 1024 * 1024;  // таван 2 MB на ред (огр�
 
 function readNew(file, st) {
   let size;
-  try { const stat = fs.statSync(file); size = stat.size; st.mtime = stat.mtimeMs; } catch {
+  try {
+    const stat = fs.statSync(file); size = stat.size;
+    const identity = `${stat.dev}:${stat.ino}`;
+    if ((st.identity && st.identity !== identity) || (st.mtime !== stat.mtimeMs && size <= st.pos)) {
+      st.pos = 0; st.rest = Buffer.alloc(0); st.skipLine = false; pruneProviders(file);
+    }
+    st.identity = identity; st.mtime = stat.mtimeMs;
+  } catch {
     tracked.delete(file); links.delete(file); pruneProviders(file); return;
   }
   if (size < st.pos) { st.pos = 0; st.rest = Buffer.alloc(0); st.skipLine = false; } // файлът е пренаписан
@@ -795,13 +808,12 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   if (AGY_ON) console.log(`Antigravity: watching ${AGY_ROOTS.join(', ')}`);
   if (AGY_ON) watchAgyProcs();
   watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx, ocLive).catch(() => {});
-  lan.start().catch(() => {});
+  if (!OFFLINE) lan.start().catch(() => {});
   scanSessions();
   wallet.port = actual;
   perms.syncPort(actual);
   wallet.start();
-  weather.start();
-  updates.start();
+  if (!OFFLINE) { weather.start(); updates.start(); }
   process.once('exit', () => wallet.close());
   console.log(`Cubicle Crew: http://localhost:${actual}   (demo without Claude: /?demo   showcase: /?demo=showcase)`);
   folders.start();

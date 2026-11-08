@@ -4,6 +4,7 @@ import { app, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain, Notificat
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { configure as configureKimi } from '../kimi/hooks-cli.mjs';
 import { drawIcon16 } from './icon-art.js';
 import { canSelfUpdate, download as downloadUpdate, runInstaller } from './updater.js';
 
@@ -366,6 +367,14 @@ function resetPlace() {
 }
 
 // едно и също меню: в трея и от бутона ⚙ в прозореца
+function changeKimiIntegration(action) {
+  try {
+    const result = configureKimi(action);
+    dialog.showMessageBox({ type: 'info', title: 'Kimi Code integration', message: result.installed
+      ? 'Observation hooks enabled. Restart Kimi Code CLI to load them.'
+      : 'Observation hooks disabled.', detail: result.file });
+  } catch (e) { dialog.showMessageBox({ type: 'error', title: 'Kimi Code integration', message: e.message }); }
+}
 function menuTemplate() {
   const t = tr();
   // кратко меню: всички настройки са в прозореца („Настройки и помощ…“); тук – отварянето и „кликовете минават през“,
@@ -384,6 +393,11 @@ function menuTemplate() {
     { label: t.strip, type: 'checkbox', checked: settings.strip, click: (m) => setStrip(m.checked) },
     { label: t.through, type: 'checkbox', checked: settings.through, click: (m) => applyDesktop('through', m.checked) },
     { type: 'separator' },
+    { label: 'Kimi Code integration', submenu: [
+      { label: 'Enable observation hooks', click: () => changeKimiIntegration('install') },
+      { label: 'Disable observation hooks', click: () => changeKimiIntegration('uninstall') },
+      { label: 'Check integration', click: () => changeKimiIntegration('status') },
+    ] },
     { label: t.quit, click: () => { quitting = true; app.quit(); } },
   ];
 }

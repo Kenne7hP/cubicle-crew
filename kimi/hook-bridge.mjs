@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { normalizeHook } from './normalize.mjs';
 const limit = 1024 * 1024;
 const deadline = setTimeout(() => process.exit(0), 700); deadline.unref();
@@ -21,7 +22,8 @@ try {
   for await (const c of process.stdin) { size += c.length; if (size > limit) process.exit(0); chunks.push(c); }
   const event = normalizeHook(JSON.parse(Buffer.concat(chunks).toString('utf8')));
   if (event) {
-    const home = process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office');
+    const dir = path.dirname(fileURLToPath(import.meta.url));
+    const home = process.env.PIXEL_OFFICE_HOME || (path.basename(dir) === 'kimi-helper' ? path.dirname(dir) : path.join(os.homedir(), '.pixel-office'));
     const file = path.join(home, 'bridge.json');
     if (fs.statSync(file).size > 4096) process.exit(0);
     const runtime = JSON.parse(fs.readFileSync(file, 'utf8'));
