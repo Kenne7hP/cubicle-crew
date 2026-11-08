@@ -30,12 +30,16 @@
     "predist": "node -e \"fs.rmSync('release', { recursive: true, force: true })\"",
     "dist": "electron-builder --win nsis",
     "dist:mac": "electron-builder --mac --publish never",
-    "dist:linux": "electron-builder --linux --publish never"
+    "dist:linux": "electron-builder --linux --publish never",
+    "kimi:hooks:install": "node kimi/hooks-cli.mjs install",
+    "kimi:hooks:status": "node kimi/hooks-cli.mjs status",
+    "kimi:hooks:uninstall": "node kimi/hooks-cli.mjs uninstall"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "dependencies": {
+    "smol-toml": "^1.9.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {
