@@ -7,7 +7,7 @@ const CRASH_STAY_MS = 15 * 60e3; // прекъсната сесия стои п�
 const QUESTION_STAY_MS = 30 * 60e3; // неотговорен въпрос (OpenCode question…) държи „чака те“ най-много толкова
 // временно име, докато доставчикът не разбере проекта – само то се сменя с истинското (иначе името стои, както е дошло:
 // статистиката и портфейлът се водят по него, а Claude Code сменя cwd в транскрипта при всяко `cd`)
-const GENERIC_LABELS = new Set(['codex', 'gemini', 'opencode', 'antigravity']);
+const GENERIC_LABELS = new Set(['kimi', 'codex', 'gemini', 'opencode', 'antigravity']);
 const betterLabel = (cur, nxt) => !!nxt && nxt !== cur && (!cur || GENERIC_LABELS.has(cur)) && !GENERIC_LABELS.has(nxt);
 
 export class Model {
@@ -78,17 +78,34 @@ export class Model {
     }
     if (e.type === 'presence') return;
 
+    if (['codex', 'kimi'].includes(e.provider)) a.observed = true;
     a.lastEvent = now;
     a.lastType = e.type;
     a.crashed = 0; // пак пише (напр. claude --resume)
     if (a.done && e.type !== 'tool_end') { a.done = false; } // пак работи
     // молбата е отговорена (резултат/нов текст) – и ако статусът на сесията още не е дошъл. Нов tool_start
     // веднага след молбата е закъснял ред от същото съобщение – той не я маха.
-    if (a.ask && (e.type !== 'tool_start' || now - a.ask.since > 1500)) a.ask = null;
+    if (!a.observed && a.ask && (e.type !== 'tool_start' || now - a.ask.since > 1500)) a.ask = null;
 
     switch (e.type) {
+      case 'turn_start':
+        a.observed = true; a.turnOpen = true; a.uncertain = false; a.busy = true; a.outcome = null; this.clearAsk(a); break;
+      case 'waiting':
+        a.statusWaiting = true; this.attention({ session: a.id, kind: e.reason === 'permission' ? 'permission' : 'input' }, now); break;
+      case 'permission_resolved': a.statusWaiting = false; this.clearAsk(a); break;
+      case 'turn_complete': case 'turn_failed': case 'turn_interrupted': case 'idle':
+        a.observed = true; a.turnOpen = false; a.uncertain = false; a.busy = false; a.pending.clear(); a.statusWaiting = false; this.clearAsk(a); break;
+      case 'session_end':
+        a.turnOpen = false; a.busy = false; a.pending.clear(); a.ended = true; a.live = false; a.statusWaiting = false; this.clearAsk(a); break;
+      case 'outcome':
+        a.outcome = { kind: e.outcome, confidence: e.confidence, scope: e.scope, until: now + 1800 };
+        if (e.outcome === 'success') this.emit('celebrate', a);
+        break;
+
       case 'tool_start': {
-        a.pending.set(e.id, { tool: e.tool, detail: e.detail || '', start: now });
+        if (a.pending.has(e.id)) break;
+        if (a.observed) { a.turnOpen = true; a.uncertain = false; }
+        a.pending.set(e.id, { tool: e.tool, detail: e.detail || '', testing: !!e.testing, start: now });
         a.toolCalls++; this.totalTools++;
         a.lastTool = { tool: e.tool, detail: e.detail || '' };
         // хронология за картата („какво правеше, докато ме нямаше“) – последните 40, с часа
@@ -143,6 +160,15 @@ export class Model {
       if (typeof s.model === 'string' && s.model) a.model = s.model.slice(0, 60);
       if (s.ctx > 0) { a.ctx = s.ctx; a.ctxMax = s.ctxMax || a.ctxMax || 200000; }
       if (typeof s.name === 'string' && s.name) a.sessionName = s.name;
+      if (['codex', 'kimi'].includes(s.provider) && s.confidence) {
+        a.observed = true; a.uncertain = s.status === 'unknown'; a.restored = !!s.restored;
+        a.turnOpen = s.status === 'busy' || s.status === 'waiting';
+        if (Array.isArray(s.tools)) {
+          const ids = new Set(s.tools.map(t => t.id));
+          for (const id of a.pending.keys()) if (!ids.has(id)) a.pending.delete(id);
+          for (const t of s.tools) if (!a.pending.has(t.id)) a.pending.set(t.id, { tool: t.tool, detail: '', testing: !!t.testing, start: now });
+        }
+      }
       a.busy = s.status === 'busy';   // Claude Code: "busy" докато мисли/работи (в транскрипта може да няма редове), "idle" – чака промпт
       // "waiting" (+ waitingFor: "permission prompt"…) – чака теб; щом стане пак "busy"/"idle", е отговорено
       const was = a.statusWaiting;
@@ -206,12 +232,14 @@ export class Model {
   }
 
   stateOf(a, now) {
+    if (a.observed && a.uncertain) return 'idle';
     if (a.ask) return 'waiting'; // чака разрешение – без 8-секундното правило (докато чака, редове няма)
     if (this.asking(a, now)) return 'waiting'; // висящ въпрос към теб – докато не отговориш, редове няма
     const tools = [...a.pending.values()];
+    if (a.observed && !tools.length && !a.turnOpen && !a.busy) return 'idle';
     const delegatingPending = tools.some((p) => DELEGATE_TOOLS.has(p.tool));
     // под-агент, чийто родител още чака резултата му, работи (мисли между стъпките) – без 8-секундното правило
-    if (now - a.lastEvent > CFG.IDLE_MS && !a.busy && !(a.subagent && !a.done && this.parentWaits(a))) {
+    if (now - a.lastEvent > CFG.IDLE_MS && !a.busy && !a.turnOpen && !(a.subagent && !a.done && this.parentWaits(a))) {
       if (delegatingPending && this.liveChildren(a) > 0) return 'delegating';
       a.pending.clear();
       return 'idle';
@@ -244,11 +272,14 @@ export class Model {
   tick(now) {
     for (const a of this.agents.values()) {
       if (a.leaving) continue;
-      const s = this.stateOf(a, now);
+      let s = this.stateOf(a, now);
+      // Hold brief work poses, but never delay permission, completion, or uncertain status.
+      if (a.observed && a.turnOpen && !a.uncertain && s !== 'waiting' && a.state !== 'waiting' &&
+          ['typing', 'reading', 'running'].includes(a.state) && now - a.stateSince < 400) s = a.state;
       if (s !== a.state) {
         const old = a.state;
         if (old === 'idle') a.busySince = now;
-        if (s === 'idle' && a.busySince && now - CFG.IDLE_MS - a.busySince > CFG.CONFETTI_MIN_RUN_MS) this.emit('celebrate', a);
+        if (!a.observed && s === 'idle' && a.busySince && now - CFG.IDLE_MS - a.busySince > CFG.CONFETTI_MIN_RUN_MS) this.emit('celebrate', a);
         a.state = s; a.stateSince = now;
         this.emit('state', a, old, s);
       }

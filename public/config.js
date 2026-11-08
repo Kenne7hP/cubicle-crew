@@ -37,10 +37,10 @@ export const CFG = {
 
 // Цветовете на състоянията са част от визуалния език — не ги променяй без причина.
 /** Други агенти освен Claude Code (имената са еднакви на двата езика). */
-export const PROVIDERS = { cowork: 'Cowork', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', antigravity: 'Antigravity', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
+export const PROVIDERS = { kimi: 'Kimi Code', cowork: 'Cowork', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', antigravity: 'Antigravity', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
 
 /** Бранд цветове + пиксел символ за заставката на монитора при idle (агент без активност); липсващ запис = звездичката на Claude. */
-export const PROVIDER_MARK = { opencode: { c: '#fab283', g: 'ring' }, codex: { c: '#10a37f', g: 'gear' }, gemini: { c: '#4285f4', g: 'star4' }, antigravity: { c: '#7c6af7', g: 'star4' }, copilot: { c: '#a371f7', g: 'eyes' }, cursor: { c: '#7f8ea3', g: 'bar' } };
+export const PROVIDER_MARK = { kimi: { c: '#98bc69', g: 'gear' }, opencode: { c: '#fab283', g: 'ring' }, codex: { c: '#10a37f', g: 'gear' }, gemini: { c: '#4285f4', g: 'star4' }, antigravity: { c: '#7c6af7', g: 'star4' }, copilot: { c: '#a371f7', g: 'eyes' }, cursor: { c: '#7f8ea3', g: 'bar' } };
 
 export const STATES = {
   idle:       { color: '#6b6b80' },

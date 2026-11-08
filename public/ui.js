@@ -416,6 +416,11 @@ export class UI {
       const tool = this.model.currentTool(ag);
       let btxt = null;
       if (tool && (st === 'typing' || st === 'reading' || st === 'running' || st === 'delegating')) btxt = [tool.tool, prefs.private ? '' : shortDetail(tool.detail, 38), danger(tool.tool, tool.detail)];
+      if (tool?.testing && st === 'running') btxt = ['Testing', 'inferred from tool command'];
+      if (ag.uncertain) btxt = ['Status unknown', ag.restored ? 'Restored recent activity' : 'No recent lifecycle evidence'];
+      if (ag.outcome?.until > now && st !== 'waiting') btxt = [ag.outcome.kind === 'error'
+        ? (ag.outcome.scope === 'tool' ? 'Tool failed' : 'Turn failed') : 'Turn completed',
+        ag.outcome.confidence === 'inferred' ? 'inferred' : '', ag.outcome.kind === 'error'];
       if (ag.crashed && !ag.crashSeen) btxt = [T.crashed.title, T.crashed.hint];
       else if (st === 'waiting') btxt = this.waitText(ag, now);
       const bkey = btxt ? btxt.join('|') : '';
