@@ -13,6 +13,8 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 
 // ---------------------------------------------------------------- общи
+export const projectName = (s) => String(s || '').split(/[\\/]+/).filter(Boolean).pop() || '';
+export const isTestCommand = (s) => /^(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:test|test:[\w-]+)|(?:pytest|vitest|jest)|(?:python(?:3)?\s+-m\s+pytest)|(?:cargo|go|dotnet)\s+test|mvn\s+test)(?:\s|$)/i.test(unwrapShell(s));
 const clip = (s, n = 60) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
 
 /** Командата без обвивката bash -lc "…" / powershell -Command "…" и без водещо cd <път> &&. */
@@ -61,7 +63,8 @@ function metaOf(file) {
 function applyMeta(m, obj) {
   if (obj?.type !== 'session_meta') return;
   const p = obj.payload || {};
-  if (p.cwd) m.label = path.basename(String(p.cwd).replace(/[\\/]+$/, '')) || m.label;
+  if (typeof p.id === 'string' && /^[\w-]{1,80}$/.test(p.id)) m.id = 'codex:' + p.id;
+  if (p.cwd) m.label = projectName(p.cwd) || m.label;
   // под-агент (spawn_agent): в meta има родителската нишка
   const par = p.parent_thread_id || p.source?.subagent?.parent_thread_id || p.source?.subagent?.thread_spawn?.parent_thread_id || p.forked_from_id;
   if (par && typeof par === 'string') m.parent = 'codex:' + par;
@@ -106,7 +109,7 @@ export function codexLine(file, line, emit, usage, setCtx = () => {}) {
   try { obj = JSON.parse(line); } catch { return; }
   const m = metaOf(file);
   if (obj.type === 'session_meta') { applyMeta(m, obj); return; }
-  const base = { agent: m.id, label: m.label, subagent: !!m.parent, provider: 'codex', ts: Date.now() };
+  const base = { agent: m.id, label: m.label, subagent: !!m.parent, provider: 'codex', ts: Date.now(), turn_id: obj.payload?.turn_id };
   if (m.parent) base.parent = m.parent;
   const out = (e) => emit({ ...base, ...e });
   const p = obj.payload || {};
@@ -114,17 +117,20 @@ export function codexLine(file, line, emit, usage, setCtx = () => {}) {
     if (p.type === 'function_call' || p.type === 'custom_tool_call' || p.type === 'local_shell_call') {
       const name = p.namespace && !['functions', 'exec'].includes(p.namespace) ? `${p.namespace.startsWith('mcp__') ? p.namespace : 'mcp__' + p.namespace}__${p.name}` : p.name || p.type;
       const [tool, detail] = name.startsWith('mcp__') ? [name, ''] : codexTool(p.type === 'local_shell_call' ? 'local_shell' : name, p.type === 'local_shell_call' ? p.action : p.arguments ?? p.input);
-      out({ type: 'tool_start', id: p.call_id || p.id, tool, detail });
+      out({ type: 'tool_start', id: p.call_id || p.id, tool, detail: '', testing: tool === 'Bash' && isTestCommand(detail) });
     } else if (p.type === 'function_call_output' || p.type === 'custom_tool_call_output' || p.type === 'local_shell_call_output') {
       out({ type: 'tool_end', tool_use_id: p.call_id });
     } else if (p.type === 'web_search_call') {
       const id = p.id || p.call_id || `ws${Date.now()}`;
-      out({ type: 'tool_start', id, tool: 'WebSearch', detail: clip(p.action?.query) });
+      out({ type: 'tool_start', id, tool: 'WebSearch', detail: '' });
       out({ type: 'tool_end', tool_use_id: id });
     } else if (p.type === 'message' && p.role === 'assistant') out({ type: 'say' });
     else if (p.type === 'reasoning') out({ type: 'say' });
   } else if (obj.type === 'event_msg') {
-    if (p.type === 'user_message') out({ type: 'user_prompt' });
+    if (['task_started', 'turn_started'].includes(p.type)) out({ type: 'turn_start' });
+    else if (['task_complete', 'turn_complete'].includes(p.type)) out({ type: p.error ? 'turn_failed' : 'turn_complete' });
+    else if (p.type === 'turn_aborted') out({ type: p.error ? 'turn_failed' : 'turn_interrupted' });
+    else if (p.type === 'user_message') out({ type: 'user_prompt' });
     else if (p.type === 'item_completed' && p.item?.type === 'UserMessage') out({ type: 'user_prompt' });
     else if (p.type === 'token_count' && p.info?.last_token_usage) {
       const u = p.info.last_token_usage, cached = u.cached_input_tokens || 0;
@@ -641,7 +647,11 @@ function agyProjectOf(p) {
   if (typeof p !== 'string' || !p) return null;
   const clean = agyUnquote(p);
   if (typeof clean !== 'string' || clean.length < 3) return null;
-  const norm = path.normalize(clean.replace(/^["']|["']$/g, ''));
+  if (process.platform !== 'win32' && /^[a-z]:[\\/]/i.test(clean)) {
+    const dir = path.win32.extname(clean) ? path.win32.dirname(clean) : clean;
+    return path.win32.basename(dir);
+  }
+  const norm = path.normalize(clean.replace(/^["']|["']$/g, '').replace(/\\/g, '/'));
   if (norm.includes(`${path.sep}.gemini${path.sep}`) || norm.includes(`${path.sep}AppData${path.sep}`) || norm.startsWith('/tmp/')) return null;
   const dir = path.extname(norm) ? path.dirname(norm) : norm;
   if (agyProjCache.has(dir)) return agyProjCache.get(dir);
@@ -659,7 +669,7 @@ function agyProjectOf(p) {
     if (!up || up === cur) break;
     cur = up;
   }
-  const fb = path.basename(dir);
+  const fb = projectName(dir);
   return fb && fb.length > 1 && !/^[a-z]:\\?$/i.test(fb) ? fb : null;
 }
 
@@ -714,7 +724,7 @@ function agyApplyMeta(g, o, setCtx) {
 function agyLabel(g, file) {
   if (g.labelSrc === 'history' || !g.promptAt) return;
   const ws = agyWorkspace(file, g.promptAt);
-  const name = ws && path.basename(ws.replace(/[\\/]+$/, ''));
+  const name = ws && projectName(ws);
   if (name) { g.label = name; g.labelSrc = 'history'; }
 }
 

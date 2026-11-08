@@ -11,6 +11,7 @@ import { WebSocketServer } from 'ws';
 import { Wallet } from './wallet.js';
 import { Weather } from './weather.js';
 import { Updates } from './update.js';
+import { ObservedSessions } from './observed-sessions.js';
 import { External } from './external.js';
 import { focusPid } from './focus.js';
 import { execFile } from 'node:child_process';
@@ -271,6 +272,7 @@ const perms = new Permissions({
 const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });
 const updates = new Updates(broadcast, (m) => { if (DEBUG) console.log(m); });
 // отвореният вход за други агенти (POST /api/event): събитията – като от транскриптите, състоянията – в живите сесии
+const codexSessions = new ObservedSessions({ emit: (e) => emitEvt(e), changed: () => scanSessions() });
 const external = new External({ emit: (e) => emitEvt(e), changed: () => scanSessions() });
 // изглед за телефон в локалната мрежа (по желание, с PIN, само за гледане)
 lan = new Lan({
@@ -396,6 +398,7 @@ function scanSessions() {
   for (const pk of sidOfPid.keys()) if (!pids.has(pk)) sidOfPid.delete(pk);
   const cur = new Set(sidOfPid.values());
   for (const sid of prevOf.keys()) if (!cur.has(sid)) prevOf.delete(sid);
+  for (const x of codexSessions.list()) if (!list.some((y) => y.agent === x.agent)) list.push(x);
   for (const x of external.list()) if (!list.some((y) => y.agent === x.agent)) list.push(x);
   for (const x of ocLive.list) if (!list.some((y) => y.agent === x.agent)) list.push(x);
   for (const x of agyLiveList()) if (!list.some((y) => y.agent === x.agent)) list.push(x);
@@ -515,6 +518,7 @@ function linkFor(file, obj, agent) {
 
 /** Едно събитие към страницата и портфейла (от Claude Code, Codex, OpenCode или Antigravity). */
 function emitEvt(evt) {
+  if (['codex', 'kimi'].includes(evt.provider)) { evt = { ...evt, detail: '' }; delete evt.desc; }
   const c = ctxNow.get(evt.agent);
   if (c && ctxSent.get(evt.agent) !== c) { evt.ctx = c[0]; evt.ctxMax = c[1]; ctxSent.set(evt.agent, c); }
   while (ctxSent.size > 500) ctxSent.delete(ctxSent.keys().next().value);
@@ -535,7 +539,7 @@ function setCtx(agent, ctx, max) {
 
 function handleLine(file, line) {
   if (isAgyFile(file)) { agyLine(file, line, emitEvt, usageOf, setCtx); return; }
-  if (isCodexFile(file)) { codexLine(file, line, emitEvt, usageOf, setCtx); return; }
+  if (isCodexFile(file)) { codexLine(file, line, (e) => codexSessions.ingest(e), usageOf, setCtx); return; }
   if (isGeminiFile(file)) { geminiLine(file, line, emitEvt, usageOf, setCtx); return; }
   if (file.startsWith(GEMINI_ROOT + path.sep)) return; // други .jsonl в ~/.gemini/tmp (не са разговори)
   if (line.length > 2048 && line.includes('"api-request-blob"')) return;
@@ -649,6 +653,21 @@ function consider(file, now, statArg = null) {
     st = { pos: d ? d.size : old ? stat.size : 0, rest: Buffer.alloc(0), mtime: stat.mtimeMs };
     if (DEBUG) console.log('следя', file);
   }
+  // Bounded recovery: rebuild metadata/state without replaying tools, rewards or outcomes.
+  if (isCodexFile(file) && st.pos > 0 && !d?.st) {
+    try {
+      const fd = fs.openSync(file, 'r');
+      const start = Math.max(0, stat.size - 256 * 1024);
+      const buf = Buffer.alloc(stat.size - start);
+      try { fs.readSync(fd, buf, 0, buf.length, start); } finally { fs.closeSync(fd); }
+      const lines = buf.toString('utf8').split('\n');
+      if (start) lines.shift();
+      const rest = lines.pop();
+      st.rest = Buffer.from(rest || '');
+      for (const line of lines) codexLine(file, line, (e) => codexSessions.ingest(e,
+        { silent: true, restored: true, at: stat.mtimeMs }), () => {}, () => {});
+    } catch { /* absent/incomplete transcript is not evidence of live work */ }
+  }
   tracked.set(file, st);
   if (isAgyFile(file)) agyTouch(file, stat.mtimeMs, setCtx);
 }
@@ -707,6 +726,13 @@ function poll() {
     // между пълните обхождания – само папките на проектите (нова сесия) и на активните сесии (нов под-агент);
     // readdir без statSync на старите файлове
     const dirs = new Set();
+    if (CODEX_ON) {
+      const d = new Date();
+      for (const t of [d, new Date(d.getTime() - 86400000)]) {
+        dirs.add(path.join(CODEX_ROOT, String(t.getFullYear()), String(t.getMonth() + 1).padStart(2, '0'), String(t.getDate()).padStart(2, '0')));
+        dirs.add(path.join(CODEX_ROOT, String(t.getUTCFullYear()), String(t.getUTCMonth() + 1).padStart(2, '0'), String(t.getUTCDate()).padStart(2, '0')));
+      }
+    }
     try { for (const e of fs.readdirSync(ROOT, { withFileTypes: true })) if (e.isDirectory()) dirs.add(path.join(ROOT, e.name)); } catch { /* няма папка */ }
     for (const f of tracked.keys()) {
       const dir = path.dirname(f);
