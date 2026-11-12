@@ -9,6 +9,14 @@
 - Original code, procedural pixel-art engine, sprites, office interactions, desktop widget, and inherited media/documentation are credited to the upstream author and contributors.
 - The original MIT copyright and permission notice are retained in [LICENSE](LICENSE). The upstream commit history is preserved.
 
+Specific inherited contribution credits, as recorded by upstream and retained in the README:
+
+- **[@buensoft](https://github.com/buensoft)** — Bueno, the tricolour pet.
+- **[@TheDjRider](https://github.com/TheDjRider)** — the fennec fox, capybara and wombat, including their color variants.
+- **Ivan Turtev** — the “Beer & metal” neon sign.
+- **Hristiyan Dimov** — the massage chair.
+- Upstream AI-assisted co-author credits are retained in the original Git commits.
+
 This is an independently maintained fork. The original project and its author should not be understood to endorse this fork or its changes. The inherited README sections and upstream demo/download links describe the original release unless explicitly labeled otherwise.
 
 ## This fork
