@@ -1,6 +1,6 @@
 // Настройки и помощ – панел в прозореца (менюто в трея остава кратко): колона с разделите вляво, съдържанието вдясно.
 // Разделите са по смисъл: как изглежда, кога те вика, какво вижда/праща, прозорецът, споделяне, помощ.
-// Всеки раздел има цвят от езика на състоянията и пикселна иконка 9x9 (рисува се тук, без файлове).
+// Section accents follow the paper/forest palette; agent state colours remain in config.js.
 // Отметките носят същите data-* като досега – ui.onHelpChange() ги прилага.
 import { T, LANG, STATES, STATE_ORDER, PARAMS } from './config.js';
 import { prefs } from './prefs.js';
@@ -18,7 +18,7 @@ const ICONS = {
   share: ['......bb.', '.....baab', '..bb.baab', '.baab.bb.', '.baaaab..', '.baab.bb.', '..bb.baab', '.....baab', '......bb.'],  // споделяне
   help: ['..bbbbb..', '.baaaaab.', 'baab.baab', '....baab.', '...baab..', '...bab...', '...bbb...', '...bab...', '...bbb...'],     // въпрос
 };
-const SECTIONS = { look: '#4a8fe0', alerts: '#e04a6b', privacy: '#b04ae0', window: '#e07a4a', share: '#4ac26b', help: '#e0c24a' };
+const SECTIONS = { look: '#496b4d', alerts: '#b4434c', privacy: '#6e7a48', window: '#a66b3e', share: '#3f6c58', help: '#96733c' };
 const urls = {};
 function iconUrl(key) {
   if (urls[key]) return urls[key];
@@ -72,6 +72,9 @@ function sections(ui) {
   const out = {};
   // как изглежда
   out.look = `<div class="cards">${card('mode', 'office', !prefs.focus, H.office, H.officeHint)}${card('mode', 'focus', prefs.focus, H.focus, H.focusHint)}</div>` +
+    sw('data-pref="mini"', prefs.mini, 'Mini office', 'Smaller room. Agents stay at their desks; live states and details remain available.') +
+    sw('data-pref="dunder"', prefs.dunder, 'Dunder Mifflin setup', 'Scranton-inspired reception, sales desks, glass office and paper supplies. Turn off for the original room.') +
+    sw('data-pref="officeCast"', prefs.officeCast, 'The Office cast', 'Michael, Jim, Pam, Dwight and the Scranton crew. Fixed outfits; live states stay on screens and labels. Project names remain in details.') +
     (D ? sw('id="desk-strip" data-desk="strip"', D.strip, H.strip, H.stripHint) : '') +
     sw('id="opt-legend" data-legend', !ui.legend.hidden, H.legend, H.legendHint) +
     sw('id="pref-lights" data-pref="lights"', prefs.lights, H.lights, H.lightsHint) +

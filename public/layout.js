@@ -36,7 +36,7 @@ export function teamNeed(podH = CFG.POD_H) {
  * devW/devH – размер на прозореца във ФИЗИЧЕСКИ пиксели.
  * Връща логическия размер на стаята, мащаба (цяло число) и позициите на всичко.
  */
-export function computeLayout(devW, devH) {
+export function computeLayout(devW, devH, { mini = false, overflow = 0 } = {}) {
   let best = null;
   // втори вариант с по-гъсти редове – за малки прозорци (печели само ако дава по-голям мащаб)
   for (const podH of [CFG.POD_H, CFG.POD_H_COMPACT]) {
@@ -140,10 +140,25 @@ export function computeLayout(devW, devH) {
   // килим под бюрата
   const rugs = [{ x: Math.round(ox) - 6, y: oy + 6, w: Math.round(gridW) + 12, h: Math.round(gridH) - 4 }]; // един общ килим
 
-  return {
+  const layout = {
     scale, W, H, cols, rows, pods, teams, rugs, rowYs, lounge, door, podH,
     need: teamNeed(), cap: pods.length,
     deskArea: { x0: ax0, x1: ax1, y0: ay0, y1: ay1 },
     leftLaneX: Math.round(ox) - 4, // лявата вертикална пътека – до първата колона бюра
   };
+  if (mini) {
+    // Keep seat identities intact across modes; only geometry changes.
+    const w = 244, h = 184 + Math.ceil(overflow / 3) * 38;
+    Object.assign(layout, { mini: true, overflow, W: w, H: h, need: { w, h },
+      scale: Math.max(1, Math.min(CFG.MAX_SCALE, Math.floor(Math.min(devW / w, devH / h)))),
+      deskArea: { x0: 8, x1: 236, y0: 60, y1: 174 }, leftLaneX: 4 });
+    for (const p of pods) {
+      p.x = 8 + (p.role === 'lead' ? p.team * 2 : p.slot) * 76;
+      p.y = p.role === 'lead' ? 58 : 108;
+      p.cx = p.x + POD.seat.x; p.aisleY = p.y + POD.aisle.y; p.seatY = p.y + POD.seat.y;
+    }
+    layout.rowYs = [73, 123];
+    layout.rugs = [];
+  }
+  return layout;
 }

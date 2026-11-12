@@ -53,7 +53,9 @@ export function configure(action, { file = configFile(), home = process.env.PIXE
       fs.copyFileSync(new URL(name, import.meta.url), tmp); fs.renameSync(tmp, path.join(helper, name));
     }
     const command = hookCommand(node || findNode(), path.join(helper,'hook-bridge.mjs'), platform);
-    const payload = EVENTS.map(event => `[[hooks]]\nevent = ${JSON.stringify(event)}\ncommand = ${JSON.stringify(command)}\ntimeout = 1\n`).join('\n');
+    // Native Windows PowerShell startup exceeded one second in the local smoke test.
+    const timeout = platform === 'win32' ? 2 : 1;
+    const payload = EVENTS.map(event => `[[hooks]]\nevent = ${JSON.stringify(event)}\ncommand = ${JSON.stringify(command)}\ntimeout = ${timeout}\n`).join('\n');
     if (block && block.payload === payload) return { changed: false, installed: true, file };
     if (block) throw new Error('Existing integration uses another path. Uninstall it before reinstalling.');
     const prefix = original.length > 0 && !original.endsWith('\n') ? '\n' : '';

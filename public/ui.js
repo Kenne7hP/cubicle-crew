@@ -397,7 +397,7 @@ export class UI {
       const anc = office.anchors(a);
       const hidden = a.alpha < 0.05;
       // етикет
-      const name = (ag.subagent ? '↳ ' : '★ ') + ((!prefs.private && ag.desc) || this.displayName(ag)) + (ag.provider && !ag.subagent ? ` · ${PROVIDERS[ag.provider] || ag.provider}` : '');
+      const name = (ag.subagent ? '↳ ' : '★ ') + (prefs.officeCast ? this.displayName(ag) : ((!prefs.private && ag.desc) || this.displayName(ag))) + (ag.provider && !ag.subagent ? ` · ${PROVIDERS[ag.provider] || ag.provider}` : '');
       this.set(it, 'name', name, () => { it.label.children[1].textContent = name; it.lw = 0; });
       this.set(it, 'st', st, () => {
         it.label.children[0].style.background = STATES[st].color;
@@ -541,6 +541,8 @@ export class UI {
   displayName(ag) {
     const own = prefs.name(ag.id);
     if (own) return own;
+    const actor = this.office.actors.get(ag.id);
+    if (prefs.officeCast && actor?.crewKey) return this.office.nameOf(actor.crewKey);
     // ако няколко сесии са в един проект – добавяме кратко id
     let dup = 0;
     for (const o of this.model.agents.values()) if (o.label === ag.label && !o.subagent) dup++;
@@ -556,7 +558,7 @@ export class UI {
       [T.state, `<i class="dot" data-state="${st}" style="background:${STATES[st].color}"></i>${T.states[st]}`],
     ];
     // постоянният колега (раздел „Екип“): името му и типът помощник
-    if (a.crewKey && a.id !== this.office.avatarId) rows.push([T.colleague, '<b>' + esc(this.office.nameOf(a.crewKey)) + '</b>' + (ag.subagent && ag.atype ? ' <span class="dim">· ' + esc(ag.atype) + '</span>' : '')]);
+    if (a.crewKey && (prefs.officeCast || a.id !== this.office.avatarId)) rows.push([T.colleague, '<b>' + esc(this.office.nameOf(a.crewKey)) + '</b>' + (ag.subagent && ag.atype ? ' <span class="dim">· ' + esc(ag.atype) + '</span>' : '')]);
     if (ag.provider) rows.push([T.agentKind, esc(PROVIDERS[ag.provider] || ag.provider)]);
     if (ag.model) rows.push([T.model, esc(shortModel(ag.model))]);
     if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${dangerHtml(tool, priv ? '' : esc(shortDetail(tool.detail, 46)))}`]);

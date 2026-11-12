@@ -1,3 +1,5 @@
+import { ENV } from './palette.js';
+
 // Каталог на обзавеждането + постижения. Общ за сървъра и клиента (без DOM): цени, слотове и правилата
 // за купуване/слагане се проверяват на едно място. Рисуването на всеки предмет е в environment.js.
 // ВНИМАНИЕ: id-тата са записът в save.json (и бъдещи Steam ключове) – НИКОГА не ги преименувай.
@@ -196,7 +198,7 @@ export function setOffice(save, b = {}) {
 const I = (id, group, price, name, data = {}) => ({ id, group, price, name, ...data });
 export const ITEMS = [
   // стени (цвят; останалите тонове се смятат от него)
-  I('wall.slate', 'wall', 0, 'Синьо-сива', { wall: '#56607e', stripe: '#5b6685', dark: '#3b415c', ceiling: '#2c3048' }),
+  I('wall.slate', 'wall', 0, 'Пергамент', { wall: ENV.wall, stripe: ENV.wallStripe, dark: ENV.wallDark, ceiling: ENV.ceiling }),
   I('wall.sage', 'wall', 60, 'Градински чай', { wall: '#6e8a70' }),
   I('wall.terracotta', 'wall', 60, 'Теракота', { wall: '#a8644e' }),
   I('wall.charcoal', 'wall', 60, 'Графит', { wall: '#3c3c48' }),
@@ -205,28 +207,28 @@ export const ITEMS = [
   I('wall.lavender', 'wall', 80, 'Лавандула', { wall: '#7a6a9a' }),
   I('wall.forest', 'wall', 120, 'Горско зелено', { wall: '#3e6a4e' }),
   // ламперия
-  I('wainscot.dark', 'wainscot', 0, 'Тъмна ламперия', { panel: '#3e4560', hi: '#4c5574', rail: '#7d88a8', base: '#2a2d40', baseHi: '#3a3e56' }),
+  I('wainscot.dark', 'wainscot', 0, 'Тъмна ламперия', { panel: ENV.wainscot, hi: ENV.wainscotHi, rail: ENV.rail, base: ENV.base, baseHi: ENV.baseHi }),
   I('wainscot.white', 'wainscot', 90, 'Бели панели', { panel: '#d8d2c4', hi: '#ece6da', rail: '#f4f1ea', base: '#a8a090', baseHi: '#c4bcac' }),
   I('wainscot.wood', 'wainscot', 150, 'Дървена ламперия', { panel: '#6a4630', hi: '#845a3e', rail: '#a07850', base: '#4a2e1e', baseHi: '#5e3c28' }),
   // под
-  I('floor.oak', 'floor', 0, 'Дъб', { style: 'planks', planks: ['#7a5236', '#845a3b', '#6f4a30', '#7e5538'], seam: '#5a3a24', grain: '#694530', hi: '#946a48' }),
+  I('floor.oak', 'floor', 0, 'Дъб', { style: 'planks', planks: ENV.floor, seam: ENV.floorSeam, grain: ENV.floorGrain, hi: ENV.floorHi }),
   I('floor.birch', 'floor', 180, 'Бреза', { style: 'planks', planks: ['#c8a878', '#d0b080', '#bea06e', '#ccac7c'], seam: '#9a7a50', grain: '#b09068', hi: '#e0c498' }),
   I('floor.walnut', 'floor', 200, 'Орех', { style: 'planks', planks: ['#4e3222', '#563826', '#462c1e', '#523424'], seam: '#2e1c12', grain: '#3e2618', hi: '#6a4630' }),
   I('floor.checker', 'floor', 250, 'Шахматни плочки', { style: 'checker', a: '#cfc8b8', b: '#8e8678', seam: '#6e685c' }),
   I('floor.concrete', 'floor', 300, 'Бетон (лофт)', { style: 'concrete', base: '#8a8c90', dk: '#7c7e82', hi: '#9a9ca0', seam: '#6a6c70' }),
   // килими под екипите (един купен килим става и за двата екипа)
-  I('rug.plain.blue', 'rug', 0, 'Син', { style: 'plain', c: ['#323a62', '#425080', '#4a578a'] }),
+  I('rug.plain.blue', 'rug', 0, 'Градински чай', { style: 'plain', c: ['#6f7b56', '#909b72', '#a5ad83'] }),
   I('rug.plain.green', 'rug', 0, 'Зелен', { style: 'plain', c: ['#2e4a42', '#3c5e52', '#466a5c'] }),
   I('rug.plain.plum', 'rug', 40, 'Сливов', { style: 'plain', c: ['#4a2e4a', '#5e3c5e', '#6a466a'] }),
   I('rug.stripes', 'rug', 80, 'На райета', { style: 'stripes', c: ['#2e3a5a', '#c8a050', '#a8484a', '#d8d4cc'] }),
   I('rug.round', 'rug', 180, 'Кръгъл', { style: 'round', c: ['#3a5a7a', '#4a7090', '#e8e4dc'] }),
   I('rug.persian', 'rug', 220, 'Персийски', { style: 'persian', c: ['#5a1a20', '#8a2e30', '#c8a050', '#2a3a6a'] }),
   // килим в зоната за почивка
-  I('lrug.red', 'lrug', 0, 'Червен', { style: 'classic' }),
+  I('lrug.red', 'lrug', 0, 'Теракота', { style: 'classic' }),
   I('lrug.boho', 'lrug', 150, 'Бохо', { style: 'boho' }),
   I('lrug.fluffy', 'lrug', 200, 'Пухкав бял', { style: 'fluffy' }),
   // диван
-  I('sofa.modern.teal', 'sofa', 0, 'Модерен – петрол', { style: 'modern', c: '#3a7a8a', hi: '#4c94a4', dk: '#265660', dk2: '#1c3e46' }),
+  I('sofa.modern.teal', 'sofa', 0, 'Модерен – мъх', { style: 'modern', c: '#536f50', hi: '#7e9368', dk: '#3a533b', dk2: '#2b3f30' }),
   I('sofa.modern.mustard', 'sofa', 120, 'Модерен – горчица', { style: 'modern', c: '#c8962e' }),
   I('sofa.modern.coral', 'sofa', 120, 'Модерен – корал', { style: 'modern', c: '#d0604e' }),
   I('sofa.modern.navy', 'sofa', 120, 'Модерен – тъмносин', { style: 'modern', c: '#3a4a7a' }),
@@ -236,8 +238,8 @@ export const ITEMS = [
   I('sofa.beanbags', 'sofa', 250, 'Пуфове', { style: 'beanbags' }),
   I('sofa.chesterfield', 'sofa', 400, 'Честърфийлд', { style: 'chesterfield', c: '#7a3a2a' }),
   // столове (за под-агентите на всеки екип и за оркестраторите)
-  I('chair.navy', 'chair', 0, 'Тъмносин', { c: '#3d4660', hi: '#52607e', dk: '#2a3044' }),
-  I('chair.red', 'chair', 0, 'Червен', { c: '#8a2e36', hi: '#b04a50', dk: '#5a1c24' }),
+  I('chair.navy', 'chair', 0, 'Горско зелено', { c: ENV.chair, hi: ENV.chairHi, dk: ENV.chairDk }),
+  I('chair.red', 'chair', 0, 'Теракота', { c: '#b6774e', hi: '#ce9869', dk: '#805037' }),
   I('chair.green', 'chair', 50, 'Зелен', { c: '#3e7a52' }),
   I('chair.purple', 'chair', 50, 'Лилав', { c: '#6a4a8a' }),
   I('chair.orange', 'chair', 50, 'Оранжев', { c: '#c0703a' }),

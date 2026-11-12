@@ -1,5 +1,7 @@
 # MVP validation report — 2026-11-08
 
+This is the original supplied Linux-container report. For subsequent native Windows checks, fixes, screenshots and installer output, see [Windows validation](2026-11-08-windows-validation-report.md). Historical results below are retained as recorded.
+
 ## Environment and revision
 
 Upstream baseline: Cubicle Crew 2.22.0 / 6e71e32b66952cbf46e8b7db1d84d1415337cc46.

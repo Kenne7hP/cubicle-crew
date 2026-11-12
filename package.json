@@ -28,6 +28,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test test/*.test.js",
+    "test:desktop": "electron scripts/desktop-smoke.mjs",
+    "test:mini": "electron scripts/mini-smoke.mjs",
     "debug": "node server.js --debug",
     "desktop": "electron .",
     "icon": "node scripts/make-icon.mjs",
@@ -67,6 +69,9 @@
     "monitor"
   ],
   "author": "Kalin Dimitrov",
+  "contributors": [
+    { "name": "Ken (@Kenne7hP)", "url": "https://github.com/Kenne7hP" }
+  ],
   "license": "MIT",
   "build": {
     "appId": "com.pixeloffice.desktop",
@@ -165,9 +170,9 @@
       "artifactName": "CubicleCrew-${version}-linux.${ext}"
     }
   },
-  "homepage": "https://github.com/rezored/cubicle-crew",
+  "homepage": "https://github.com/Kenne7hP/cubicle-crew",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rezored/cubicle-crew.git"
+    "url": "git+https://github.com/Kenne7hP/cubicle-crew.git"
   }
 }

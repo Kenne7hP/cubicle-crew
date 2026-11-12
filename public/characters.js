@@ -221,6 +221,7 @@ export class Actor {
   }
 
   shirtColor(now) {
+    if (this.look.shirt) return this.look.shirt;
     const to = STATES[this.vstate].color;
     const k = clamp((now - this.vstateAt) / CFG.CROSSFADE_MS, 0, 1);
     if (k >= 1) return to;

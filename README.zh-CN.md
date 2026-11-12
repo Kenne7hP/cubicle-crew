@@ -1,3 +1,13 @@
+# Scranton Edition 定制分支
+
+这是 [Kalin Dimitrov（@rezored）的 Cubicle Crew](https://github.com/rezored/cubicle-crew) 的个人 fork，由 [Ken（@Kenne7hP）](https://github.com/Kenne7hP) 在 OpenAI Codex 协助下定制。保留原作者 MIT 版权与提交历史，完整署名见 [CREDITS.md](CREDITS.md)。
+
+新增 Mini / Office 一键切换、暖色调 Dunder Mifflin 风格布置、16 位《The Office》角色像素预设，以及 Codex/Kimi 观察和 Windows 修复。角色保留服装色，屏幕与标签继续显示实时状态；点击可查看原项目。运行本版本请使用[当前 fork 的源码启动说明](README.md#run-this-edition-from-source)或[中文指南](README_MVP_zh.md)。预览均使用合成会话。
+
+以下为保留的上游文档，其中 npm、在线演示、下载和捐助链接均指向原项目。
+
+---
+
 <div align="center">
 
 <img src="docs/media/logo.png" alt="Cubicle Crew" width="520">

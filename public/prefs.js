@@ -23,6 +23,9 @@ const listeners = [];
 let onBattery = false;
 
 export const prefs = {
+  get mini() { return !!state.mini; },
+  get dunder() { return state.dunder !== false; },
+  get officeCast() { return state.officeCast !== false; },
   get focus() { return !!state.focus; },
   get private() { return !!state.private || PARAMS.lan; }, // телефонът: винаги (сървърът и без това не праща командите)
   get lights() { return state.lights !== false; },

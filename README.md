@@ -1,4 +1,49 @@
-> **Codex + Kimi Code MVP fork:** [中文安装与验证说明](README_MVP_zh.md) · [Test report](docs/test-report.md). Upstream documentation below.
+# Cubicle Crew — Scranton Edition
+
+A personal fork of **[Cubicle Crew](https://github.com/rezored/cubicle-crew)** by **[Kalin Dimitrov / @rezored](https://github.com/rezored)**, customized by **[Ken / @Kenne7hP](https://github.com/Kenne7hP)** with assistance from OpenAI Codex. The original MIT license, author credit, and commit history are preserved. Full attribution: **[CREDITS.md](CREDITS.md)**.
+
+This edition adds a warm palette, a smaller **Mini office**, a **Dunder Mifflin-inspired setup**, and **16 The Office character-inspired presets** to the existing pixel office. It also includes Codex/Kimi observation improvements and native Windows fixes. This is an unofficial fan customization.
+
+**[中文安装与验证说明](README_MVP_zh.md)** · [Windows guide](docs/windows.md) · [Validation](docs/2026-11-11-scranton-validation-report.md) · [Credits](CREDITS.md)
+
+![Scranton-inspired full office, synthetic sessions](docs/media/scranton-office.png)
+
+<p align="center"><img src="docs/media/scranton-mini.png" alt="Mini office with Michael and Jim, synthetic sessions" width="390"></p>
+
+### What changes in this fork
+
+- **Mini / Office:** the bottom-right button switches room size and restores the full window bounds. Mini keeps agents at desks, pauses wandering and pets, and retains live status and clickable details. Extra agents get compact rows.
+- **Scranton setup:** reception, sales desks, a glass office partition, conference table, blinds and paper supplies in cream, green and wood tones.
+- **The Office cast:** Michael, Jim, Pam, Dwight and 12 more colleagues receive stable local assignments and distinct hair, accessories and clothing. Screens, lights and labels show live status. Click a character to see its original project/provider. Manual aliases and crew edits take precedence.
+- **Observed Codex + Kimi sessions:** independent characters, explicit waiting, lifecycle and outcome handling, Windows hook compatibility, and recovery of active Codex logs with stale modification timestamps.
+- **Local defaults:** loopback-only service with upstream network features disabled by default. Kimi observation requires optional hooks; Codex reads existing session files.
+
+Look settings expose **Mini office**, **Dunder Mifflin setup**, and **The Office cast** independently.
+
+### Run this edition from source
+
+Requires **Node.js 22+** and npm. Codex/Kimi run separately; this monitor does not dispatch tasks or call paid model APIs.
+
+```bash
+git clone https://github.com/Kenne7hP/cubicle-crew.git
+cd cubicle-crew
+git switch feat/codex-kimi-live
+npm ci
+npm test
+npm run desktop
+```
+
+For the browser view, use `npm start` and open the loopback address printed in the terminal. For Kimi observation setup, follow [the integration guide](docs/kimi.md). Use `npm run test:desktop` and `npm run test:mini` for isolated Electron checks with synthetic sessions. Generated test profiles and runtime data stay in ignored `local-runtime/`.
+
+The current source has **55 passing Node tests**, plus passing desktop and Mini smoke checks. Windows desktop interactions have been checked locally; authenticated Kimi end-to-end coverage, installer acceptance, macOS/Linux desktop behavior, and production performance are not established by these synthetic tests. No binary release of the Scranton customization is provided here.
+
+![The Office-inspired pixel character roster](docs/media/scranton-cast.png)
+
+---
+
+## Original Cubicle Crew documentation
+
+The documentation below is preserved from upstream for attribution and reference. Its npm package, online demo, release downloads, funding links and platform claims refer to **rezored/cubicle-crew**, not a packaged release of this fork. Follow the source instructions above for this edition.
 
 <div align="center">
 

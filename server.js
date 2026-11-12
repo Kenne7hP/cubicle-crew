@@ -634,6 +634,7 @@ function readNew(file, st) {
   let n = 0;
   try { n = fs.readSync(fd, buf, 0, toRead, st.pos); } finally { fs.closeSync(fd); }
   st.pos += n;
+  if (n > 0) st.activity = Date.now();
   const chunk = n < toRead ? buf.subarray(0, n) : buf;
   const all = st.rest.length ? Buffer.concat([st.rest, chunk]) : chunk;
   const lastNl = all.lastIndexOf(0x0a);
@@ -656,13 +657,36 @@ function listDir(dir) {
   try { return fs.readdirSync(dir).filter((n) => n.endsWith('.jsonl') && n !== 'transcript_full.jsonl').map((n) => path.join(dir, n)); } catch { return []; }
 }
 
+// Windows writers can keep mtime unchanged while appending. Read only a bounded
+// tail to admit an already-running Codex session after the monitor restarts.
+function codexActivity(file, size, now) {
+  const length = Math.min(size, 256 * 1024), start = size - length;
+  const fd = fs.openSync(file, 'r'), buf = Buffer.alloc(length);
+  try { fs.readSync(fd, buf, 0, length, start); } finally { fs.closeSync(fd); }
+  const lines = buf.toString('utf8').split('\n');
+  if (start) lines.shift();
+  lines.pop(); // A partial final record is not evidence of activity yet.
+  let latest = 0;
+  for (const line of lines) {
+    try {
+      const at = Date.parse(JSON.parse(line).timestamp);
+      if (at <= now && at > latest) latest = at;
+    } catch { /* incomplete or invalid record */ }
+  }
+  return latest;
+}
+
 // нов или събуден файл -> tracked; стар (непипан от час) -> dormant
 function consider(file, now, statArg = null) {
   let stat = statArg;
   if (!stat) { try { stat = fs.statSync(file); } catch { return; } }
   const d = dormant.get(file);
-  if (d && d.mtime === stat.mtimeMs) return;
-  if (now - stat.mtimeMs > ACTIVE_WINDOW_MS) { dormant.set(file, { mtime: stat.mtimeMs, size: stat.size, st: d?.st }); return; }
+  if (d && d.mtime === stat.mtimeMs && d.size === stat.size) return;
+  let activity = d ? now : stat.mtimeMs;
+  if (!d && isCodexFile(file) && now - activity > ACTIVE_WINDOW_MS) {
+    try { activity = Math.max(activity, codexActivity(file, stat.size, now)); } catch { /* file disappeared */ }
+  }
+  if (now - activity > ACTIVE_WINDOW_MS) { dormant.set(file, { mtime: stat.mtimeMs, size: stat.size, st: d?.st }); return; }
   dormant.delete(file);
   let st = d?.st;
   if (!st) {
@@ -672,6 +696,7 @@ function consider(file, now, statArg = null) {
     st = { pos: d ? d.size : old ? stat.size : 0, rest: Buffer.alloc(0), mtime: stat.mtimeMs };
     if (DEBUG) console.log('следя', file);
   }
+  st.activity = activity;
   // Bounded recovery: rebuild metadata/state without replaying tools, rewards or outcomes.
   if (isCodexFile(file) && st.pos > 0 && !d?.st) {
     try {
@@ -684,7 +709,7 @@ function consider(file, now, statArg = null) {
       const rest = lines.pop();
       st.rest = Buffer.from(rest || '');
       for (const line of lines) codexLine(file, line, (e) => codexSessions.ingest(e,
-        { silent: true, restored: true, at: stat.mtimeMs }), () => {}, () => {});
+        { silent: true, restored: true, at: activity }), () => {}, () => {});
     } catch { /* absent/incomplete transcript is not evidence of live work */ }
   }
   tracked.set(file, st);
@@ -762,7 +787,7 @@ function poll() {
   }
   for (const [file, st] of tracked) {
     readNew(file, st);
-    if (st.mtime && now - st.mtime > ACTIVE_WINDOW_MS) {
+    if (now - (st.activity || st.mtime) > ACTIVE_WINDOW_MS) {
       tracked.delete(file);
       links.delete(file);
       pruneProviders(file);

@@ -1,3 +1,5 @@
+> **Scranton Edition fork:** Original Cubicle Crew by [Kalin Dimitrov / @rezored](https://github.com/rezored/cubicle-crew), customized by [Ken / @Kenne7hP](https://github.com/Kenne7hP) with Codex assistance. See the [current fork README](README.md) and [credits](CREDITS.md). The Japanese documentation below is preserved from upstream; its demo and release links refer to the original project.
+
 <div align="center">
 
 <img src="docs/media/logo.png" alt="Cubicle Crew" width="520">

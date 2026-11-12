@@ -13,6 +13,7 @@ import { grabZone, ShakeDetector, nearestFree, surfaceAt, inRect } from './petdr
 import { Life } from './life.js';
 import { avatarLook, randomAv } from './sprites.js';
 import { prefs } from './prefs.js';
+import { castFor } from './office-cast.js';
 import { drawBoardScreen, boardGlow, boardMoving, BOARD_PAGES } from './board.js';
 import { rgba, mix } from './palette.js';
 import { R, pixLine, hashStr, clamp } from './util.js';
@@ -72,7 +73,7 @@ export class Office {
   /** Клик върху агент: почиващият ти маха (life.js). */
   greet(a) { this.life.greet(a); }
   /** Нов инструмент (model 'tool_start'): торта при юбилей, рядка разходка до библиотеката. */
-  onTool(agent, e) { this.life.onTool(agent, e); }
+  onTool(agent, e) { if (!prefs.mini) this.life.onTool(agent, e); }
 
   /** Клик върху дъската: някой отива до екрана и сменя слайда с дистанционното (без хора – веднага). */
   boardClick(now = performance.now()) {
@@ -146,7 +147,7 @@ export class Office {
   }
 
   relayout() {
-    this.L = computeLayout(this.dev.w, this.dev.h);
+    this.L = computeLayout(this.dev.w, this.dev.h, { mini: prefs.mini, overflow: this.live().filter(a => !a.seat).length });
     this.room = buildRoom(this.L, this.seed, this.decor);
     this.podImgs = this.L.pods.map((p) => buildPod(hashStr(`pod${p.team}${p.role}${p.slot}`) ^ this.seed, p.role === 'lead', this.decor, p.team));
     this.layoutVersion++;
@@ -169,7 +170,7 @@ export class Office {
     this.crewSeen = seen || {};
     if ((me || null) !== this.crewMe) { this.crewMe = me || null; this.syncAvatar(); }
     for (const a of this.actors.values()) {
-      if (a.id === this.avatarId || !a.crewKey) continue;
+      if ((a.id === this.avatarId && !prefs.officeCast) || !a.crewKey) continue;
       if (JSON.stringify(old[a.crewKey]?.av) !== JSON.stringify(this.crew[a.crewKey]?.av)) a.setLook(this.lookOf(a));
     }
   }
@@ -184,10 +185,18 @@ export class Office {
     let key = base, n = 1;
     while (used.has(key)) key = `${base}#${++n}`;
     a.crewKey = key;
+    if (prefs.officeCast) castFor(key);
   }
+
+  castOf(key) { return prefs.officeCast ? castFor(key) : null; }
+  avatarOfCrew(key) { return this.crew[key]?.av || this.castOf(key)?.av || randomAv(key); }
 
   /** Външният вид: аватарът ти, иначе колегата от save.crew, иначе случаен, но постоянен по ключа. */
   lookOf(a) {
+    if (prefs.officeCast) {
+      const key = a.crewKey || a.id, cast = castFor(key);
+      return { ...avatarLook(this.avatarOfCrew(key), a.id, !!a.agent.subagent), shirt: cast.shirt };
+    }
     if (a.id === this.avatarId) return avatarLook(this.avatar, a.id);
     if (!a.crewKey) return avatarLook(randomAv(a.id), a.id, !!a.agent.subagent);
     return avatarLook(this.crew[a.crewKey]?.av || randomAv(a.crewKey), a.id, !!a.agent.subagent);
@@ -195,6 +204,7 @@ export class Office {
   /** Името на колегата по ключ: своето от „Екип“, иначе постоянно (без повторения в целия екип). */
   nameOf(key) {
     if (!key) return '';
+    if (prefs.officeCast) return this.crew[key]?.name || castFor(key).name;
     const keys = new Set([...Object.keys(this.crewSeen), ...Object.keys(this.crew)]);
     for (const a of this.actors.values()) if (a.crewKey) keys.add(a.crewKey);
     keys.add(key);
@@ -213,7 +223,7 @@ export class Office {
     for (const a of this.actors.values()) {
       if (crewKey(a.agent) === a.crewBase) continue;
       this.assignCrew(a);
-      if (a.id !== this.avatarId) a.setLook(this.lookOf(a));
+      if (a.id !== this.avatarId || prefs.officeCast) a.setLook(this.lookOf(a));
       if (!a.agent.subagent) this.syncAvatar(); // проектът се смени – може да е твоят
     }
   }
@@ -223,7 +233,7 @@ export class Office {
     if (JSON.stringify(av) === JSON.stringify(this.avatar)) return;
     this.avatar = av;
     const a = this.actors.get(this.avatarId);
-    if (a) a.setLook(avatarLook(av, a.id));
+    if (a) a.setLook(this.lookOf(a));
   }
 
   /** Ново обзавеждане (от портфейла или прегледа в магазина): любимците + прерисуване на стаята. */
@@ -247,7 +257,7 @@ export class Office {
       this.petBySlot[slot].look = look;
     }
     // режим „Фокус“: без любимци (остават си записани – връщат се при изключване)
-    this.pets = prefs.focus ? [] : PET_SLOTS.map((s) => this.petBySlot[s]).filter(Boolean);
+    this.pets = prefs.focus || prefs.mini ? [] : PET_SLOTS.map((s) => this.petBySlot[s]).filter(Boolean);
     if (this.heldPet && !this.pets.includes(this.heldPet)) this.heldPet = null; // любимецът в ръката е изчезнал (прибран/Фокус)
   }
 
@@ -328,7 +338,10 @@ export class Office {
   }
 
   /** Подредбата е постоянна – само опреснява кое бюро е на кого. */
-  ensureLayout() { for (const a of this.actors.values()) a.pod = this.podIndexOf(a.seat); }
+  ensureLayout() {
+    if (prefs.mini && this.L && this.L.overflow !== this.live().filter(a => !a.seat).length) this.relayout();
+    for (const a of this.actors.values()) a.pod = this.podIndexOf(a.seat);
+  }
 
   teamOf(id) {
     const a = id && this.actors.get(id);
@@ -465,6 +478,10 @@ export class Office {
   /** Крайна точка на дадено място. */
   locPoint(loc, a) {
     const L = this.L, lo = L.lounge;
+    if (prefs.mini && !a.seat && loc.type !== 'door') {
+      const i = Math.max(0, this.live().filter(x => !x.seat).indexOf(a));
+      return { x: 42 + (i % 3) * 80, y: 188 + Math.floor(i / 3) * 38 };
+    }
     switch (loc.type) {
       case 'seat': { const p = L.pods[a.pod]; return p && { x: p.cx, y: p.seatY }; }
       case 'coffee': return lo.spots.coffee;
@@ -531,6 +548,15 @@ export class Office {
   }
 
   route(a, to) {
+    if (prefs.mini) {
+      const i = Math.max(0, this.live().filter(x => !x.seat).indexOf(a));
+      const loc = to.type === 'door' && to.exit ? to : a.seat ? { type: 'seat' } : { type: 'lounge', i };
+      const pt = this.locPoint(loc, a);
+      if (pt) { a.x = pt.x; a.y = pt.y; }
+      a.pendingLoc = null;
+      a.goTo(loc, []);
+      return;
+    }
     let A;
     if (a.mode === 'walk') {
       A = this.currentAnchor(a);
@@ -691,6 +717,14 @@ export class Office {
   decide(a, now) {
     const ag = a.agent;
     if (ag.leaving || a.leavingNow) return;
+    if (prefs.mini) {
+      const type = a.seat ? 'seat' : 'lounge';
+      const i = this.live().filter(x => !x.seat).indexOf(a);
+      if (a.loc.type !== type || (!a.seat && a.loc.i !== i) || a.mode === 'walk' || a.mode === 'pace') this.route(a, { type });
+      const pt = this.locPoint(a.loc, a);
+      if (pt) { a.x = pt.x; a.y = pt.y; }
+      return;
+    }
     if (a.mode === 'walk') {
       // ако е тръгнал към почивка, а вече има работа – връща се
       if (a.seat && ag.state !== 'idle' && !['seat', 'pace', 'visit', 'transit', 'door', 'board', 'books', 'peek'].includes(a.loc.type)) this.route(a, { type: 'seat' });
@@ -845,7 +879,7 @@ export class Office {
       if (c.ate) { c.ate = false; this.fx.hearts(c.x, c.y - 16); sfx('munch', (c.x / this.room.W) * 1.4 - 0.7); } // хапна лакомството
       if (c.landed) { c.landed = null; this.petLanded(c, now); } // пуснат любимец се е приземил
     } // любимците не застават в масажния стол
-    this.life.update(dt, now);
+    if (!prefs.mini) this.life.update(dt, now);
     // прашинки в слънчевите снопове
     if (!prefs.focus && this.tod && this.tod.daylight * (this.tod.sunny ?? 1) > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
       const pt = beamPoint(this.sun);
@@ -951,7 +985,7 @@ export class Office {
       // ?gl: стъклото в албедото остава прозрачно – небето е отделна текстура (свети само и оцветява светлината отвън)
       if (this.gl) { ctx.clearRect(0, 0, room.W, room.H); drawSky(this.gl.skyCtx(), room, tod, now); }
       else drawSky(ctx, room, tod, now);
-      this.life.drawOutside(ctx, now); // птичката на перваза – зад рамката на прозореца
+      if (!prefs.mini) this.life.drawOutside(ctx, now); // птичката на перваза – зад рамката на прозореца
       ctx.drawImage(room.bg, 0, 0);
       const st = this.model.stats();
       drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: prefs.focus ? null : this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
@@ -996,7 +1030,7 @@ export class Office {
       items.push({ key: k, actor: a, seated: occupant.get(a.pod) === a, fn: () => { a.draw(ctx, now, 'body'); if (!occupant.has(a.pod) || occupant.get(a.pod) !== a) a.draw(ctx, now, 'front'); } });
     }
     for (const c of this.pets) items.push({ key: c.hanging ? 1e6 : (c.keyOverride ?? c.y), fn: () => c.render(ctx, now) }); // котката на бюрото – над плота; вдигнатият е най-отгоре
-    this.life.items((key, fn) => items.push({ key, fn }), ctx, now);
+    if (!prefs.mini) this.life.items((key, fn) => items.push({ key, fn }), ctx, now);
     if (room.aquarium) items.push({ key: room.aquarium.key + 0.5, fn: () => drawAquariumFish(ctx, room.aquarium, now) });
     if (room.arcade) items.push({ key: room.arcade.key + 0.5, fn: () => drawArcadeScreen(ctx, room.arcade, now) });
     if (room.massage) { const on = this.live().some((x) => x.loc.type === 'massage' && x.mode === 'idleSpot'); items.push({ key: room.massage.key + 3, fn: () => drawMassageLed(ctx, room.massage, now, on) }); }
@@ -1016,7 +1050,7 @@ export class Office {
     // 7) частици и икони отгоре
     this.fx.draw(ctx, 'top');
     for (const a of this.actors.values()) a.drawOverlay(ctx, now);
-    this.life.drawOverlay(ctx, now);
+    if (!prefs.mini) this.life.drawOverlay(ctx, now);
     if (this.focusId && this.actors.has(this.focusId)) this.drawFocus(ctx, this.actors.get(this.focusId), now);
   }
 
@@ -1228,7 +1262,7 @@ export class Office {
       }
     }
     const lo = L.lounge;
-    if (prefs.lamp) {
+    if (prefs.lamp && room.lampGlow) {
       glow(ctx, room.lampGlow.x, room.lampGlow.y, 34, '#ffd890', 0.05 + 0.38 * night);
       glowE(ctx, room.lampGlow.x, lo.floorLamp.base - 1, 40, 13, '#ffd890', 0.32 * night); // кръг светлина на пода
     }

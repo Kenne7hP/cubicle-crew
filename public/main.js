@@ -73,6 +73,22 @@ ui.onClip = () => { ui.note(T.help.recording); capture.clip((ok) => ui.note(ok ?
 shop.onToggle = () => { lastSpecKey = ''; resize(); };
 // „Фокус“ / „Скривай команди“ (от ? панела или от трея): любимците, стената с монетите, магазинът
 prefs.onChange((k) => {
+  if (k === 'officeCast') {
+    for (const a of office.actors.values()) a.setLook(office.lookOf(a));
+    office.namesSig = '';
+  }
+  if (k === 'mini' || k === 'dunder') {
+    shop.close();
+    if (ui.help && !ui.help.hidden) ui.toggleHelp(false);
+    document.body.classList.toggle('mini-office', prefs.mini);
+    office.syncPets();
+    office.life.chats.length = 0;
+    fx.list.length = 0;
+    office.relayout();
+    lastSpecKey = '';
+    resize();
+    syncModeButton();
+  }
   if (k === 'gl' || k === 'saver' || k === 'atmos' || k === 'focus') syncGl();
   if (k === 'saver' && prefs.saver) fx.list.length = 0;
   if (k === 'perf') perfEl();
@@ -81,6 +97,17 @@ prefs.onChange((k) => {
   if (prefs.focus) { shop.close(); fx.list.length = 0; for (const a of office.actors.values()) if (a.sofaAct === 'game' || a.sofaAct === 'doze') a.sofaAct = 'rest'; }
 });
 if (PARAMS.debug) { window.__shop = shop; window.__ui = ui; }
+
+const modeButton = document.getElementById('office-mode');
+function syncModeButton() {
+  modeButton.hidden = !!PARAMS.strip;
+  modeButton.textContent = prefs.mini ? '↗ Office' : '↙ Mini';
+  modeButton.setAttribute('aria-pressed', String(prefs.mini));
+  modeButton.title = prefs.mini ? 'Return to the full office' : 'Small office · stay at desks';
+  document.body.classList.toggle('mini-office', prefs.mini);
+}
+modeButton.addEventListener('click', () => prefs.set('mini', !prefs.mini));
+syncModeButton();
 
 model.on('join', (a) => office.join(a, performance.now()));
 model.on('leave', (a) => office.leave(a));
@@ -124,10 +151,10 @@ function applyCanvas() {
   glView?.resize(L.W, L.H, canvas.style.width, canvas.style.height, dpr);
   appliedVersion = office.layoutVersion;
   if (PARAMS.desktop && window.pixelOffice?.preferSize) {
-    const key = `${L.need.w}x${L.need.h}`;
+    const key = `${prefs.mini}:${L.need.w}x${L.need.h}`;
     if (key !== lastSpecKey) {
       lastSpecKey = key;
-      window.pixelOffice.preferSize({ w: Math.ceil((L.need.w * 2) / dpr), h: Math.ceil((L.need.h * 2) / dpr) });
+      window.pixelOffice.preferSize({ w: Math.ceil((L.need.w * 2) / dpr), h: Math.ceil((L.need.h * 2) / dpr), mini: prefs.mini });
     }
   }
 }

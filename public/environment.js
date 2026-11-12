@@ -9,6 +9,8 @@ import { drawText, textWidth, compactNum } from './pixelfont.js';
 import { drawCoin } from './tokens.js';
 import { SLOTS, PET_SLOTS, resolveDecor } from './catalog.js';
 import { drawWindowWeather, drawWeatherPlaque, plaqueWidth } from './weather.js';
+import { prefs } from './prefs.js';
+import { dressOffice } from './dunder.js';
 
 // =====================================================================
 // Обзавеждане (decor): предметите от catalog.js -> цветове/стилове за рисуване
@@ -36,8 +38,8 @@ const SKY_KEYS = [ // час, горе, долу, дневна светлина
   [4.6, '#0a0f2e', '#1c2450', 0],
   [5.8, '#262c66', '#c27a6e', 0.25],
   [6.8, '#4a72c0', '#f2bc8e', 0.7],
-  [8.5, '#4a8fe0', '#a8d6f2', 1],
-  [16.8, '#4a8fe0', '#a8d6f2', 1],
+  [8.5, '#8cafa4', '#e4e4c9', 1],
+  [16.8, '#8cafa4', '#e4e4c9', 1],
   [18.4, '#5a5aa4', '#f2985a', 0.6],
   [19.4, '#2c2a68', '#b0586a', 0.25],
   [20.5, '#0e1236', '#262a58', 0.04],
@@ -848,8 +850,8 @@ function drawLoungeRug(g, lr, it, r) {
     }
     return;
   }
-  R(g, '#6a2e34', lr.x, lr.y, lr.w, lr.h); R(g, '#8a3e40', lr.x + 2, lr.y + 2, lr.w - 4, lr.h - 4);
-  R(g, '#a85a4a', lr.x + 4, lr.y + 4, lr.w - 8, lr.h - 8); R(g, '#8a3e40', lr.x + 6, lr.y + 6, lr.w - 12, lr.h - 12);
+  R(g, '#8a6245', lr.x, lr.y, lr.w, lr.h); R(g, '#b58258', lr.x + 2, lr.y + 2, lr.w - 4, lr.h - 4);
+  R(g, '#d0a679', lr.x + 4, lr.y + 4, lr.w - 8, lr.h - 8); R(g, '#b58258', lr.x + 6, lr.y + 6, lr.w - 12, lr.h - 12);
   for (let x = lr.x + 8; x < lr.x + lr.w - 8; x += 4) R(g, '#e0b070', x, lr.y + Math.floor(lr.h / 2), 2, 1);
 }
 
@@ -1291,7 +1293,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   // под него – ключът за лампата и неона в зоната за почивка (prefs.lamp)
   const lampSwitch = { x: lightSwitch.x, y: lightSwitch.y + lightSwitch.h + 2, w: 5, h: 7 };
 
-  return {
+  return dressOffice({
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
     lampGlow, aquarium, arcade, massage, season, shredder, fountain,
@@ -1299,7 +1301,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
     neon: decor.neon ? { x: (clearProps?.neon?.x ?? lo.x + lo.w - 26) + 11, y: (clearProps?.neon?.y ?? 12) + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
     doorOpen: 0, dartboard: { img: dartImg, x: dt.x, y: dt.y }, // dartboard – за прозрачния фон (там стената я няма)
     decor, seed, clearProps,
-  };
+  }, prefs.dunder);
 }
 
 // =====================================================================
@@ -1482,7 +1484,7 @@ export function drawWallDynamic(ctx, room, date, stats, t) {
   drawClockHands(ctx, room.clock, room.digital, date);
   // метеостанция над шкафа с книги (клик -> настройки на времето)
   room.wxPlaque = null;
-  if (stats.wx) {
+  if (stats.wx && !room.layout.mini && !prefs.dunder) {
     const bs = room.layout.lounge.bookshelf, pw = plaqueWidth(stats.wx);
     room.wxPlaque = drawWeatherPlaque(ctx, Math.round(bs.x + bs.w / 2 - pw / 2), bs.base - bs.h - 12, stats.wx, stats.tod);
   }

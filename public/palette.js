@@ -15,8 +15,8 @@ export const rgba = (h, a) => { const [r, g, b] = hex2rgb(h); return `rgba(${r},
 /** 3 тона: светъл, среден, сянка (сянката е леко изместена към лилаво – по-жива от чисто черно). */
 export const ramp = (mid) => ({ hi: mix(mid, '#fff6e8', 0.3), mid, lo: mix(shade(mid, 0.6), '#2a1e3a', 0.25) });
 
-export const OUTLINE = '#17121f';
-export const INK = '#1d1626';
+export const OUTLINE = '#293a30';
+export const INK = '#28392f';
 
 // ---- герои ----
 export const SKINS = [
@@ -70,29 +70,29 @@ export const MUGS = ['#e8e4dc', '#e05a5a', '#4a8fe0', '#f0c04a', '#4ac26b', '#2e
 
 // ---- стая ----
 export const ENV = {
-  floor: ['#7a5236', '#845a3b', '#6f4a30', '#7e5538'],
-  floorSeam: '#5a3a24',
-  floorGrain: '#694530',
-  floorHi: '#946a48',
-  wall: '#56607e',
-  wallStripe: '#5b6685',
-  wallDark: '#3b415c',
-  wainscot: '#3e4560',
-  wainscotHi: '#4c5574',
-  rail: '#7d88a8',
-  base: '#2a2d40',
-  baseHi: '#3a3e56',
-  ceiling: '#2c3048',
-  shadow: 'rgba(20,12,24,0.35)',
-  deskTop: '#c08a58', deskTopHi: '#d4a06c', deskEdge: '#a06e44',
-  deskFront: '#8c5d3a', deskFrontDk: '#6e472c', deskFrontHi: '#9e6c46',
-  monitor: '#24252f', monitorHi: '#3a3c4c', monitorDk: '#16171e',
-  chair: '#3d4660', chairHi: '#52607e', chairDk: '#2a3044',
-  metal: '#9aa0b4', metalDk: '#6a7084',
-  frame: '#e2dccb', frameDk: '#a8a08e',
-  leaf: ['#5ab05a', '#3e8a46', '#2a6232'],
-  pot: ['#d2784a', '#a8583a', '#7a3e2a'],
-  paper: '#f4f1e8', paperDk: '#c9c2b0',
+  floor: ['#c6b48e', '#cdbc98', '#bdab85', '#c8b792'],
+  floorSeam: '#a18e6c',
+  floorGrain: '#b4a17e',
+  floorHi: '#dfceab',
+  wall: '#e8e2cd',
+  wallStripe: '#ede7d5',
+  wallDark: '#bcb69e',
+  wainscot: '#405c49',
+  wainscotHi: '#526f59',
+  rail: '#9caa87',
+  base: '#2d4235',
+  baseHi: '#52654c',
+  ceiling: '#cac4ad',
+  shadow: 'rgba(38,46,32,0.24)',
+  deskTop: '#c6a373', deskTopHi: '#dfc291', deskEdge: '#a48257',
+  deskFront: '#94734d', deskFrontDk: '#6e563d', deskFrontHi: '#af8b5d',
+  monitor: '#303b32', monitorHi: '#506052', monitorDk: '#1e2923',
+  chair: '#486350', chairHi: '#6b8267', chairDk: '#304837',
+  metal: '#a4aa93', metalDk: '#727c67',
+  frame: '#f3ead3', frameDk: '#b4a88c',
+  leaf: ['#84915c', '#5f7549', '#3a533a'],
+  pot: ['#c88b59', '#a36945', '#785039'],
+  paper: '#faf3df', paperDk: '#cfc4a8',
 };
 
 export const SYNTAX = ['#c678dd', '#61afef', '#98c379', '#e5c07b', '#abb2bf', '#e06c75', '#56b6c2'];

@@ -343,10 +343,10 @@ export class Shop {
   }
 
   /** Голям преглед (прав и на дивана) + бутоните за всяка част. attr = data-атрибутът на бутоните ('av' аватар / 'cav' колега). */
-  personEditor(sec, av, attr) {
+  personEditor(sec, av, attr, shirt) {
     const A = T.shop.avatar, gk = av.body === 1 ? 'f' : 'm', dress = AVATAR_BOTTOMS[gk][av.bottom] === 'dress';
     const pv = el('div', 'pv', sec);
-    for (const pose of ['stand', 'couchSit']) pv.appendChild(this.personCanvas(av, pose, 4));
+    for (const pose of ['stand', 'couchSit']) pv.appendChild(this.personCanvas(av, pose, 4, shirt));
     const opts = el('div', 'opts', sec);
     const row = (title, items) => {
       el('h3', null, opts, title);
@@ -473,7 +473,7 @@ export class Shop {
       if (a) return a.agent.subagent ? a.agent.atype || a.agent.provider || k.slice(2) : a.agent.label;
       return seen[k]?.label || k.slice(2);
     };
-    const avOf = (k) => crew[k]?.av || randomAv(k);
+    const avOf = (k) => o?.avatarOfCrew(k) || crew[k]?.av || randomAv(k);
     const nameOf = (k) => o?.nameOf(k) || k.slice(2);
     const sec = el('section', 'crew', this.body);
     if (this.crewSel) {
@@ -499,7 +499,7 @@ export class Shop {
         el('p', 'hint', sec).textContent = isMe ? C.meNote : C.avatarNote;
       }
       const ed = el('div', 'avatar', sec);
-      const opts = this.personEditor(ed, av, 'cav');
+      const opts = this.personEditor(ed, av, 'cav', o?.castOf(k)?.shirt);
       if (crew[k]) { const rb = el('button', 'reset', opts, C.reset); rb.type = 'button'; rb.dataset.crewreset = '1'; }
       return;
     }
@@ -514,11 +514,11 @@ export class Shop {
       el('h3', null, sec, title);
       const grid = el('div', 'people', sec);
       for (const k of ks) {
-        const mine = s.crewMe === k;
+        const mine = !prefs.officeCast && s.crewMe === k;
         const av = mine ? { body: 0, style: 0, top: 0, bottom: 0, ...avatarOf(s) } : avOf(k), a = here.get(k);
         const b = el('button', a ? 'person here' : 'person', grid);
         b.type = 'button'; b.dataset.crewsel = k;
-        b.appendChild(this.personCanvas(av, 'stand', 2, a ? STATES[a.vstate]?.color || '#4ac26b' : '#4ac26b'));
+        b.appendChild(this.personCanvas(av, 'stand', 2, o?.castOf(k)?.shirt || (a ? STATES[a.vstate]?.color || '#4ac26b' : '#4ac26b')));
         const tx = el('span', 'tx', b);
         el('b', null, tx).textContent = mine ? C.meBadge : nameOf(k);
         el('span', 'dim', tx).textContent = labelOf(k);

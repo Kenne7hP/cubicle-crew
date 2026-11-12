@@ -204,7 +204,7 @@ function createWindow() {
   const remember = () => { if (!win.isMinimized() && !waiting && !settings.strip) { settings.bounds = win.getBounds(); saveSettings(); } };
   win.on('moved', remember);
   // ръчно преоразмеряване = нов базов размер (автоматичното само го увеличава временно)
-  win.on('resized', () => { if (Date.now() - programmatic > 600 && !waiting && !settings.strip) { const nb = win.getBounds(); settings.baseSize = { w: nb.width, h: nb.height }; } remember(); });
+  win.on('resized', () => { if (Date.now() - programmatic > 600 && !waiting && !settings.strip && !settings.mini) { const nb = win.getBounds(); settings.baseSize = { w: nb.width, h: nb.height }; } remember(); });
   win.on('close', (e) => { if (!quitting) { e.preventDefault(); win.hide(); refreshTray(); } });
   win.webContents.on('did-finish-load', sendState);
   // скрит/минимизиран прозорец -> страницата спира да рисува (backgroundThrottling е изключен)
@@ -494,7 +494,14 @@ ipcMain.on('prefer-size', (_e, sz) => {
   if (!win || shopOpen || waiting || settings.strip) return;
   const b = win.getBounds();
   const wa = screen.getDisplayMatching(b).workArea;
-  const base = settings.baseSize || { w: b.width, h: b.height };
+  const mini = sz?.mini === true;
+  // Fractional display scaling can round setBounds up by a pixel. Do not accumulate it on each toggle.
+  if (mini && !settings.mini && (!settings.officeSize || Math.abs(b.width - settings.officeSize.w) > 2 || Math.abs(b.height - settings.officeSize.h) > 2)) {
+    settings.officeSize = { w: b.width, h: b.height };
+  }
+  const base = mini ? { w: 320, h: 190 } : settings.mini && settings.officeSize ? settings.officeSize : settings.baseSize || { w: b.width, h: b.height };
+  settings.mini = mini;
+  saveSettings();
   const w = Math.min(Math.max(320, base.w, sz.w | 0), wa.width - 2 * MARGIN), h = Math.min(Math.max(190, base.h, sz.h | 0), wa.height - 2 * MARGIN);
   if (Math.abs(w - b.width) < 4 && Math.abs(h - b.height) < 4) return;
   const right = b.x + b.width, bottom = b.y + b.height;
